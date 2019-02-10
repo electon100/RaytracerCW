@@ -1,6 +1,6 @@
 #include <iostream>
 #include <glm/glm.hpp>
-#include <SDL.h>
+#include "SDL.h"
 #include "SDLauxiliary.h"
 #include "TestModelH.h"
 #include <stdint.h>
@@ -25,7 +25,7 @@ struct Intersection {
   int triangleIndex;
 };
 
-void Update();
+bool Update(vec4& cameraPos, vector<Triangle>& triangles, float &yaw);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 
@@ -34,18 +34,15 @@ int main( int argc, char* argv[] )
 
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
-  float x = SCREEN_WIDTH/2;
-  float y = SCREEN_HEIGHT/2;
-  float z = -2.2f;
+  float z = -2.0f;
   float focalLength = SCREEN_WIDTH/2;
-  vec4 cameraPos( 0, 0, z, 1.0f);
+  vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
 
   vector<Triangle> triangles;
   LoadTestModel(triangles);
-
-  while( NoQuitMessageSDL() )
+  float yaw = 0.0f;
+  while( Update(cameraPos, triangles, yaw) )
     {
-      Update();
       Draw(screen, focalLength, triangles, cameraPos);
       SDL_Renderframe(screen);
     }
@@ -71,18 +68,18 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
     for (int x = 0; x < SCREEN_WIDTH; x++) {
       vec4 start = cameraPos;
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
-        if (ClosestIntersection(start, direction, triangles, closestIntersection)) {
-          PutPixelSDL(screen, x, y, triangles[closestIntersection.triangleIndex].color);
-        }
-        else {
-          PutPixelSDL(screen, x, y, vec3(0, 0, 0));
-        }
+      if (ClosestIntersection(start, direction, triangles, closestIntersection)) {
+        PutPixelSDL(screen, x, y, triangles[closestIntersection.triangleIndex].color);
+      }
+      else {
+        PutPixelSDL(screen, x, y, vec3(0, 0, 0));
+      }
     }
   }
 }
 
 /*Place updates of parameters here*/
-void Update()
+bool Update(vec4& cameraPos, vector<Triangle>& triangles, float& yaw)
 {
   static int t = SDL_GetTicks();
   /* Compute frame time */
@@ -92,6 +89,52 @@ void Update()
   /*Good idea to remove this*/
   std::cout << "Render time: " << dt << " ms." << std::endl;
   /* Update variables*/
+  vec4 a(glm::cos(yaw), 0.0f, glm::sin(yaw), 0.0f);
+  vec4 b(0.0f, 1.0f, 0.0f, 0.0f);
+  vec4 c(-glm::sin(yaw), 0.0f, glm::cos(yaw), 0.0f);
+  vec4 zs(0.0f, 0.0f, 0.0f, 1.0f);
+
+  mat4 R(a, b, c, zs);
+  mat4 RC = glm::inverse(R);
+  cout << yaw << " \n";
+  SDL_Event e;
+  while(SDL_PollEvent(&e))
+  {
+    if (e.type == SDL_QUIT)
+    {
+      return false;
+    }
+    else if (e.type == SDL_KEYDOWN)
+    {
+      int key_code = e.key.keysym.sym;
+      switch(key_code)
+      {
+        case SDLK_UP:
+          /* Move camera forwards */
+          cameraPos.z += 1.0f;
+          break;
+        case SDLK_DOWN:
+          /* Move camera backwards */
+          cameraPos.z -= 1.0f;
+          break;
+        case SDLK_LEFT:
+          /* Move camera left */
+          yaw += 0.1f;
+          cameraPos = cameraPos * R;
+          break;
+        case SDLK_RIGHT:
+          /* Move camera right */
+          yaw -= 0.1f;
+          cameraPos = cameraPos * RC;
+          break;
+        case SDLK_ESCAPE:
+          /* Move camera quit */
+          return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /* Finds closest intersection*/
@@ -117,7 +160,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
 
     vec4 ray = s + t*glm::normalize(d);
 
-    if (u > 0 && v > 0 && ((u + v) < 1) && t >= 0) {
+    if (u >= 0 && v >= 0 && ((u + v) <= 1) && t >= 0) {
       float currentDistance = glm::distance(ray, s);
       if (currentDistance < closestDistance) {
         closestDistance = currentDistance;
