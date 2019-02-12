@@ -29,15 +29,15 @@ struct Intersection {
 bool Update(vec4& cameraPos, vector<Triangle>& triangles, float &yaw);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
-vec3 DirectLight( const Intersection& i, vector<Triangle> triangles);
+vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
 
 int main( int argc, char* argv[] )
 {
 
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
-  float z = -2.0f;
-  float focalLength = SCREEN_WIDTH/2;
+  float z = -2.8f;
+  float focalLength = SCREEN_HEIGHT;
   vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
 
   vector<Triangle> triangles;
@@ -71,7 +71,9 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
       vec4 start = cameraPos;
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
       if (ClosestIntersection(start, direction, triangles, closestIntersection)) {
-        PutPixelSDL(screen, x, y, DirectLight(closestIntersection, triangles));
+        vec3 p = triangles[closestIntersection.triangleIndex].color;
+        vec3 D = DirectLight(closestIntersection, triangles);
+        PutPixelSDL(screen, x, y, p*D);
       }
       else {
         PutPixelSDL(screen, x, y, vec3(0, 0, 0));
@@ -182,7 +184,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
   }
 }
 
-vec3 DirectLight(const Intersection& i, vector<Triangle> triangles){
+vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   vec4 lightPos(0, -0.5, -0.7, 1.0);
   vec3 lightColour = 14.f * vec3(1, 1, 1);
   float r = glm::distance(i.position, lightPos);
@@ -192,5 +194,18 @@ vec3 DirectLight(const Intersection& i, vector<Triangle> triangles){
   vec4 n = triangles[i.triangleIndex].normal;
   vec3 D = B * max(glm::dot(n, r_hat), 0.0f);
 
+  Intersection closestIntersection = {
+    vec4(0, 0, 0, 0),
+    0.0f,
+    0
+  };
+  vec4 start = lightPos;
+  vec4 directionToLight = i.position - lightPos;
+  if (ClosestIntersection(start, directionToLight, triangles, closestIntersection)){
+    if (abs(closestIntersection.triangleIndex - i.triangleIndex) < 2) {
+      return D;
+    }
+    else return vec3(0, 0, 0);
+  }
   return D;
 }
