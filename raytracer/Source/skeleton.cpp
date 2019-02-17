@@ -36,8 +36,13 @@ int main( int argc, char* argv[] )
 
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
+<<<<<<< HEAD
   float z = -2.f;
   float focalLength = SCREEN_WIDTH/2;
+=======
+  float z = -2.8f;
+  float focalLength = SCREEN_HEIGHT;
+>>>>>>> 853468ad879a795a7a1d9e166b07d821e86e8452
   vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
 
   vector<Triangle> triangles;
