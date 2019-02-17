@@ -17,6 +17,9 @@ using glm::mat4;
 #define SCREEN_HEIGHT 256
 #define FULLSCREEN_MODE false
 
+float xaw = 0.f;
+float yaw = 0.f;
+float zaw = 0.f;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
@@ -26,10 +29,11 @@ struct Intersection {
   int triangleIndex;
 };
 
-bool Update(vec4& cameraPos, vector<Triangle>& triangles, float &yaw);
+bool Update(vec4& cameraPos, vector<Triangle>& triangles);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
+mat4 lookAt( const vec3 from, const vec3 to );
 
 int main( int argc, char* argv[] )
 {
@@ -38,13 +42,13 @@ int main( int argc, char* argv[] )
 
   float z = -2.f;
   float focalLength = SCREEN_WIDTH/2;
-
   vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
 
   vector<Triangle> triangles;
   LoadTestModel(triangles);
-  float yaw = 0.0f;
-  while( Update(cameraPos, triangles, yaw) )
+
+  mat4 R;
+  while( Update(cameraPos, triangles) )
     {
       Draw(screen, focalLength, triangles, cameraPos);
       SDL_Renderframe(screen);
@@ -67,14 +71,20 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
     0
   };
 
+  mat4 R ( cos(yaw)*cos(zaw), -cos(yaw)*sin(zaw) + sin(xaw)*sin(yaw)*cos(zaw), sin(xaw)*sin(zaw) + cos(xaw)*sin(yaw)*cos(zaw), 0,
+        cos(yaw)*sin(zaw), cos(xaw)*cos(zaw) + sin(xaw)*sin(yaw)*sin(zaw), -sin(xaw)*cos(zaw) + cos(xaw)*sin(yaw)*sin(zaw), 0,
+        -sin(yaw)        , sin(xaw)*cos(yaw)                              , cos(xaw)*cos(yaw)                             , 0,
+        0                , 0                                              , 0                                             , 1);
+
+  vec4 tmp_cameraPos = R * cameraPos;
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
     for (int x = 0; x < SCREEN_WIDTH; x++) {
-      vec4 start = cameraPos;
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
-      if (ClosestIntersection(start, direction, triangles, closestIntersection)) {
+      if (ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection)) {
         vec3 p = triangles[closestIntersection.triangleIndex].color;
         vec3 D = DirectLight(closestIntersection, triangles);
-        PutPixelSDL(screen, x, y, p*D);
+        vec3 indirectLight = 0.5f*vec3( 1, 1, 1);
+        PutPixelSDL(screen, x, y, p*(D+indirectLight));
       }
       else {
         PutPixelSDL(screen, x, y, vec3(0, 0, 0));
@@ -84,7 +94,7 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
 }
 
 /*Place updates of parameters here*/
-bool Update(vec4& cameraPos, vector<Triangle>& triangles, float& yaw)
+bool Update(vec4& cameraPos, vector<Triangle>& triangles)
 {
   static int t = SDL_GetTicks();
   /* Compute frame time */
@@ -93,14 +103,7 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles, float& yaw)
   t = t2;
   /*Good idea to remove this*/
   std::cout << "Render time: " << dt << " ms." << std::endl;
-  /* Update variables*/
-  vec4 a(glm::cos(yaw), 0.0f, glm::sin(yaw), 0.0f);
-  vec4 b(0.0f, 1.0f, 0.0f, 0.0f);
-  vec4 c(-glm::sin(yaw), 0.0f, glm::cos(yaw), 0.0f);
-  vec4 zs(0.0f, 0.0f, 0.0f, 1.0f);
 
-  mat4 R(a, b, c, zs);
-  mat4 RC = glm::inverse(R);
   SDL_Event e;
   while(SDL_PollEvent(&e))
   {
@@ -123,13 +126,23 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles, float& yaw)
           break;
         case SDLK_LEFT:
           /* Move camera left */
-          yaw += 0.1f;
-          cameraPos = cameraPos * R;
+          cameraPos.x -= 1.0f;
           break;
         case SDLK_RIGHT:
           /* Move camera right */
+          cameraPos.x += 1.0f;
+          break;
+        case SDLK_w:
+          xaw += 0.1f;
+          break;
+        case SDLK_s:
+          xaw -= 0.1f;
+          break;
+        case SDLK_a:
           yaw -= 0.1f;
-          cameraPos = cameraPos * RC;
+          break;
+        case SDLK_d:
+          yaw += 0.1f;
           break;
         case SDLK_ESCAPE:
           /* Move camera quit */
@@ -139,6 +152,37 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles, float& yaw)
   }
 
   return true;
+}
+
+mat4 lookAt( const vec3 from, const vec3 to ) {
+  const vec3 tmp = vec3( 0, 1, 0 );
+
+  vec3 forward = normalize(from - to);
+  vec3 right = cross(normalize(tmp), forward);
+  vec3 up = cross(forward, right);
+
+  mat4 camToWorld;
+
+  camToWorld[0][0] = right.x;
+  camToWorld[0][1] = right.y;
+  camToWorld[0][2] = right.z;
+  camToWorld[1][0] = up.x;
+  camToWorld[1][1] = up.y;
+  camToWorld[1][2] = up.z;
+  camToWorld[2][0] = forward.x;
+  camToWorld[2][1] = forward.y;
+  camToWorld[2][2] = forward.z;
+
+  camToWorld[3][0] = from.x;
+  camToWorld[3][1] = from.y;
+  camToWorld[3][2] = from.z;
+
+  camToWorld[0][3] = 0;
+  camToWorld[1][3] = 0;
+  camToWorld[2][3] = 0;
+  camToWorld[3][3] = 1;
+
+  return camToWorld;
 }
 
 /* Finds closest intersection*/
@@ -157,12 +201,19 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
     vec3 e2 = vec3(v2.x-v0.x, v2.y-v0.y, v2.z-v0.z);
     vec3 b = vec3(s.x-v0.x, s.y-v0.y, s.z-v0.z);
 
-    mat3 A(vec3(-d),e1,e2);
-    vec3 x = glm::inverse(A)*b;
+    mat3 D(vec3(-d), e1, e2);
+    mat3 DX(b, e1, e2);
+    mat3 DY(vec3(-d), b, e2);
+    mat3 DZ(vec3(-d), e1, b);
 
-    float t = x.x;
-    float u = x.y;
-    float v = x.z;
+    float det_d = determinant(D);
+    float det_dx = determinant(DX);
+    float det_dy = determinant(DY);
+    float det_dz = determinant(DZ);
+
+    float t = det_dx/det_d;
+    float u = det_dy/det_d;
+    float v = det_dz/det_d;
 
     vec4 ray = s + t*d;
 
@@ -188,6 +239,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
 vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   vec4 lightPos(0, -0.5, -0.7, 1.0);
   vec3 lightColour = 14.f * vec3(1, 1, 1);
+
   float r = glm::distance(i.position, lightPos);
   float A = 4 * M_PI * r * r;
   vec3 B = lightColour / A;
