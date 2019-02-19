@@ -15,7 +15,7 @@ using glm::mat4;
 
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 256
-#define FULLSCREEN_MODE false
+#define FULLSCREEN_MODE true
 
 float xaw = 0.f;
 float yaw = 0.f;
@@ -33,7 +33,6 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
-mat4 lookAt( const vec3 from, const vec3 to );
 
 int main( int argc, char* argv[] )
 {
@@ -154,37 +153,6 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles)
   return true;
 }
 
-mat4 lookAt( const vec3 from, const vec3 to ) {
-  const vec3 tmp = vec3( 0, 1, 0 );
-
-  vec3 forward = normalize(from - to);
-  vec3 right = cross(normalize(tmp), forward);
-  vec3 up = cross(forward, right);
-
-  mat4 camToWorld;
-
-  camToWorld[0][0] = right.x;
-  camToWorld[0][1] = right.y;
-  camToWorld[0][2] = right.z;
-  camToWorld[1][0] = up.x;
-  camToWorld[1][1] = up.y;
-  camToWorld[1][2] = up.z;
-  camToWorld[2][0] = forward.x;
-  camToWorld[2][1] = forward.y;
-  camToWorld[2][2] = forward.z;
-
-  camToWorld[3][0] = from.x;
-  camToWorld[3][1] = from.y;
-  camToWorld[3][2] = from.z;
-
-  camToWorld[0][3] = 0;
-  camToWorld[1][3] = 0;
-  camToWorld[2][3] = 0;
-  camToWorld[3][3] = 1;
-
-  return camToWorld;
-}
-
 /* Finds closest intersection*/
 bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Intersection& closestIntersection) {
   float maximum = std::numeric_limits<float>::max();
@@ -215,14 +183,17 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
     float u = det_dy/det_d;
     float v = det_dz/det_d;
 
+    // float r = ((double) rand() / (RAND_MAX)) + 1;
+    // triangles[i].normal += r;
+
     vec4 ray = s + t*d;
 
-    if (u >= 0 && v >= 0 && ((u + v) <= 1) && t >= 0) {
+    if (u >= 0 && v >= 0 && ((u + v) <= 1) && t > 0) {
       float currentDistance = glm::distance(ray, s);
       if (currentDistance < closestDistance) {
         closestDistance = currentDistance;
         closestIntersection.position = ray;
-        closestIntersection.distance = closestDistance;
+        closestIntersection.distance = currentDistance;
         closestIntersection.triangleIndex = i;
       }
     }
@@ -252,13 +223,16 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
     0.0f,
     0
   };
-  vec4 start = lightPos;
-  vec4 directionToLight = i.position - lightPos;
+
+  vec4 start = i.position + 0.01f * triangles[i.triangleIndex].normal;
+  vec4 directionToLight = lightPos - start;
   if (ClosestIntersection(start, directionToLight, triangles, closestIntersection)){
-    if (abs(closestIntersection.triangleIndex - i.triangleIndex) < 2) {
-      return D;
+    float lightDistance = r;
+    float vectDistance = closestIntersection.distance;
+    if (vectDistance < lightDistance) {
+      return vec3(0, 0, 0);
     }
-    else return vec3(0, 0, 0);
+    else return D;
   }
   return D;
 }
