@@ -13,8 +13,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 256
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 720
 #define FULLSCREEN_MODE true
 
 float xaw = 0.f;
@@ -224,7 +224,7 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
     0
   };
 
-  vec4 start = i.position + 0.01f * triangles[i.triangleIndex].normal;
+  vec4 start = i.position + 0.001f * triangles[i.triangleIndex].normal;
   vec4 directionToLight = lightPos - start;
   if (ClosestIntersection(start, directionToLight, triangles, closestIntersection)){
     float lightDistance = r;
