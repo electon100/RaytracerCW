@@ -3,7 +3,8 @@
 #include "SDL.h"
 #include "SDLauxiliary.h"
 #include "TestModelH.h"
-#include "Apperture.h"
+#include "Aperture.h"
+#include "Lens.h"
 #include <stdint.h>
 #include <math.h>
 
@@ -46,8 +47,10 @@ int main( int argc, char* argv[] )
 
   vector<Triangle> triangles;
   LoadTestModel(triangles);
-  vector<Apperture> apperture;
-  LoadAppertureHexagon(apperture);
+  vector<Aperture> aperture;
+  LoadApertureHexagon(aperture);
+  vector<Lens> lens;
+  LoadLens(lens, 0.1);
 
   mat4 R;
   while( Update(cameraPos, triangles) )
