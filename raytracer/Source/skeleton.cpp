@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include "SDL.h"
 #include "SDLauxiliary.h"
-#include "TestModelH.h"
+#include "BunnyModel.h"
 #include <stdint.h>
 #include <math.h>
 
@@ -13,9 +13,9 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
-#define FULLSCREEN_MODE true
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
+#define FULLSCREEN_MODE false
 
 float xaw = 0.f;
 float yaw = 0.f;
@@ -29,10 +29,10 @@ struct Intersection {
   int triangleIndex;
 };
 
-bool Update(vec4& cameraPos, vector<Triangle>& triangles);
-void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
-bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
-vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
+bool Update(vec4& cameraPos, vector<Model>& triangles);
+void Draw(screen* screen, float focalLength, vector<Model> triangles, vec4 cameraPos);
+bool ClosestIntersection(vec4 start, vec4 dir, const vector<Model>& triangles, Intersection& closestIntersection);
+vec3 DirectLight( const Intersection& i, const vector<Model> triangles);
 
 int main( int argc, char* argv[] )
 {
@@ -43,13 +43,15 @@ int main( int argc, char* argv[] )
   float focalLength = SCREEN_WIDTH/2;
   vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
 
-  vector<Triangle> triangles;
-  LoadTestModel(triangles);
+  // vector<Triangle> triangles;
+  // LoadTestModel(triangles);
+  vector<Model> bunny;
+  LoadBunnyModel(bunny);
 
   mat4 R;
-  while( Update(cameraPos, triangles) )
+  while( Update(cameraPos, bunny) )
     {
-      Draw(screen, focalLength, triangles, cameraPos);
+      Draw(screen, focalLength, bunny, cameraPos);
       SDL_Renderframe(screen);
     }
   SDL_SaveImage( screen, "screenshot.bmp" );
@@ -59,7 +61,7 @@ int main( int argc, char* argv[] )
 }
 
 /*Place your drawing here*/
-void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos)
+void Draw(screen* screen, float focalLength, vector<Model> bunny, vec4 cameraPos)
 {
   /* Clear buffer */
   memset(screen->buffer, 0, screen->height*screen->width*sizeof(uint32_t));
@@ -79,9 +81,9 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
     for (int x = 0; x < SCREEN_WIDTH; x++) {
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
-      if (ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection)) {
-        vec3 p = triangles[closestIntersection.triangleIndex].color;
-        vec3 D = DirectLight(closestIntersection, triangles);
+      if (ClosestIntersection(tmp_cameraPos, R * direction, bunny, closestIntersection)) {
+        vec3 p = bunny[closestIntersection.triangleIndex].color;
+        vec3 D = DirectLight(closestIntersection, bunny);
         vec3 indirectLight = 0.5f*vec3( 1, 1, 1);
         PutPixelSDL(screen, x, y, p*(D+indirectLight));
       }
@@ -93,7 +95,7 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
 }
 
 /*Place updates of parameters here*/
-bool Update(vec4& cameraPos, vector<Triangle>& triangles)
+bool Update(vec4& cameraPos, vector<Model>& bunny)
 {
   static int t = SDL_GetTicks();
   /* Compute frame time */
@@ -101,7 +103,7 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles)
   float dt = float(t2-t);
   t = t2;
   /*Good idea to remove this*/
-  std::cout << "Render time: " << dt << " ms." << std::endl;
+  // std::cout << "Render time: " << dt << " ms." << std::endl;
 
   SDL_Event e;
   while(SDL_PollEvent(&e))
@@ -154,16 +156,16 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles)
 }
 
 /* Finds closest intersection*/
-bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Intersection& closestIntersection) {
+bool ClosestIntersection(vec4 s, vec4 d, const vector<Model>& bunny, Intersection& closestIntersection) {
   float maximum = std::numeric_limits<float>::max();
   float closestDistance = maximum;
 
   d = glm::normalize(d);
 
-  for (size_t i = 0; i < triangles.size(); i++) {
-    vec4 v0 = triangles[i].v0;
-    vec4 v1 = triangles[i].v1;
-    vec4 v2 = triangles[i].v2;
+  for (size_t i = 0; i < bunny.size(); i++) {
+    vec4 v0 = bunny[i].v0;
+    vec4 v1 = bunny[i].v1;
+    vec4 v2 = bunny[i].v2;
 
     vec3 e1 = vec3(v1.x-v0.x, v1.y-v0.y, v1.z-v0.z);
     vec3 e2 = vec3(v2.x-v0.x, v2.y-v0.y, v2.z-v0.z);
@@ -187,7 +189,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
     // triangles[i].normal += r;
 
     vec4 ray = s + t*d;
-
+    cout << d.x << endl;
     if (u >= 0 && v >= 0 && ((u + v) <= 1) && t > 0) {
       float currentDistance = glm::distance(ray, s);
       if (currentDistance < closestDistance) {
@@ -207,7 +209,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
   }
 }
 
-vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
+vec3 DirectLight(const Intersection& i, const vector<Model> bunny){
   vec4 lightPos(0, -0.5, -0.7, 1.0);
   vec3 lightColour = 14.f * vec3(1, 1, 1);
 
@@ -215,7 +217,7 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   float A = 4 * M_PI * r * r;
   vec3 B = lightColour / A;
   vec4 r_hat = glm::normalize(lightPos - i.position);
-  vec4 n = triangles[i.triangleIndex].normal;
+  vec4 n = bunny[i.triangleIndex].normal;
   vec3 D = B * max(glm::dot(n, r_hat), 0.0f);
 
   Intersection closestIntersection = {
@@ -224,9 +226,9 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
     0
   };
 
-  vec4 start = i.position + 0.001f * triangles[i.triangleIndex].normal;
+  vec4 start = i.position + 0.001f * bunny[i.triangleIndex].normal;
   vec4 directionToLight = lightPos - start;
-  if (ClosestIntersection(start, directionToLight, triangles, closestIntersection)){
+  if (ClosestIntersection(start, directionToLight, bunny, closestIntersection)){
     float lightDistance = r;
     float vectDistance = closestIntersection.distance;
     if (vectDistance < lightDistance) {
