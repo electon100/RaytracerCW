@@ -5,6 +5,7 @@
 #include "TestModelH.h"
 #include <stdint.h>
 #include <math.h>
+#include <omp.h>
 
 using namespace std;
 using glm::vec3;
@@ -79,15 +80,12 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
     for (int x = 0; x < SCREEN_WIDTH; x++) {
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
-      if (ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection)) {
-        vec3 p = triangles[closestIntersection.triangleIndex].color;
-        vec3 D = DirectLight(closestIntersection, triangles);
-        vec3 indirectLight = 0.5f*vec3( 1, 1, 1);
-        PutPixelSDL(screen, x, y, p*(D+indirectLight));
-      }
-      else {
-        PutPixelSDL(screen, x, y, vec3(0, 0, 0));
-      }
+      bool intersectExists = ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection);
+      vec3 p, D, indirectLight;
+      intersectExists ? p = triangles[closestIntersection.triangleIndex].color : p = vec3(0, 0, 0);
+      intersectExists ? D = DirectLight(closestIntersection, triangles) : D = vec3(0, 0, 0);
+      intersectExists ? indirectLight = 0.5f*vec3( 1, 1, 1) : indirectLight = vec3(0, 0, 0);
+      intersectExists ? PutPixelSDL(screen, x, y, p*(D+indirectLight)) : PutPixelSDL(screen, x, y, vec3(0, 0, 0));
     }
   }
 }
@@ -160,6 +158,7 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
 
   d = glm::normalize(d);
 
+  #pragma omp simd
   for (size_t i = 0; i < triangles.size(); i++) {
     vec4 v0 = triangles[i].v0;
     vec4 v1 = triangles[i].v1;
@@ -183,11 +182,16 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
     float u = det_dy/det_d;
     float v = det_dz/det_d;
 
-    // float r = ((double) rand() / (RAND_MAX)) + 1;
-    // triangles[i].normal += r;
-
     vec4 ray = s + t*d;
 
+    // bool newIntersect = (u >= 0 && v >= 0 && ((u + v) <= 1) && t > 0);
+    // float currentDistance;
+
+    // (newIntersect) ? currentDistance = glm::distance(ray, s) : currentDistance = maximum;
+    // (newIntersect && currentDistance < closestDistance) ? closestDistance = currentDistance : closestDistance = maximum;
+    // (newIntersect && currentDistance < closestDistance) ? closestIntersection.position = ray : closestIntersection.position = closestIntersection.position;
+    // (newIntersect && currentDistance < closestDistance) ? closestIntersection.distance = currentDistance : closestIntersection.distance = closestIntersection.distance;
+    // (newIntersect && currentDistance < closestDistance) ? closestIntersection.triangleIndex = i : closestIntersection.triangleIndex = closestIntersection.triangleIndex;
     if (u >= 0 && v >= 0 && ((u + v) <= 1) && t > 0) {
       float currentDistance = glm::distance(ray, s);
       if (currentDistance < closestDistance) {
@@ -199,12 +203,8 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
     }
   }
 
-  if (closestDistance < maximum) {
-    return true;
-  }
-  else {
-    return false;
-  }
+  if (closestDistance < maximum) return true;
+  else return false;
 }
 
 vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
