@@ -3,6 +3,9 @@
 #include "SDL.h"
 #include "SDLauxiliary.h"
 #include "TestModelH.h"
+#include "Aperture.h"
+#include "Lens.h"
+#include "Lightbulb.h"
 #include <stdint.h>
 #include <math.h>
 
@@ -13,8 +16,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
 #define FULLSCREEN_MODE true
 
 float xaw = 0.f;
@@ -45,6 +48,8 @@ int main( int argc, char* argv[] )
 
   vector<Triangle> triangles;
   LoadTestModel(triangles);
+  LoadBunnyModel(triangles);
+  LoadLightModel(triangles);
 
   mat4 R;
   while( Update(cameraPos, triangles) )
