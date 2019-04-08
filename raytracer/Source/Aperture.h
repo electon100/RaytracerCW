@@ -10,44 +10,42 @@ using glm::mat3;
 using glm::vec4;
 using glm::mat4;
 
-class Aperture {
-  public:
-    glm::vec4 v0;
-  	glm::vec4 v1;
-  	glm::vec4 v2;
-    glm::vec4 v3;
-    glm::vec4 v4;
-    glm::vec4 v5;
-    glm::vec3 colour;
-  	glm::vec4 normal;
+void LoadHexagonVertices(vector<vec4> &vertices) {
+  vec4 A( -0.5, 0.65, -2, 1.0 ); // v0 - top left
+  vec4 B( 0.5, 0.65, -2, 1.0 ); // v1
+  vec4 C( 0.75, 0, -2, 1.0 ); // v2
+  vec4 D( 0.5, -0.65, -2, 1.0 ); // v3
+  vec4 E( -0.5, -0.65, -2, 1.0 ); // v4
+  vec4 F( -0.75, 0, -2, 1.0 ); // v5 - left middle
 
-    Aperture( glm::vec4 v0, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3, glm::vec4 v4, glm::vec4 v5, glm::vec3 colour )
-      : v0(v0), v1(v1), v2(v2), v3(v3), v4(v4), v5(v5), colour(colour) {
-        ComputeNormal();
-    }
+  vertices.push_back(A);
+  vertices.push_back(B);
+  vertices.push_back(C);
+  vertices.push_back(D);
+  vertices.push_back(E);
+  vertices.push_back(F);
+}
 
-    void ComputeNormal() {
-      glm::vec3 e1 = glm::vec3(v1.x-v0.x,v1.y-v0.y,v1.z-v0.z);
-      glm::vec3 e2 = glm::vec3(v2.x-v0.x,v2.y-v0.y,v2.z-v0.z);
-      glm::vec3 normal3 = glm::normalize( glm::cross( e2, e1 ) );
-      normal.x = normal3.x;
-      normal.y = normal3.y;
-      normal.z = normal3.z;
-      normal.w = 1.0;
-    }
-};
+void LoadApertureHexagon(vector<Triangle> &hexagon, float scale, float offset) {
+  vector<vec4> vertices;
+  LoadHexagonVertices(vertices);
 
-void LoadApertureHexagon(vector<Aperture> &hexagon) {
-  vec4 A( -0.5, 0.5, 1.0, 1.0 );
-  vec4 B( 0.5, 0.5, 1.0, 1.0 );
-  vec4 C( 0.75, 0, 1.0, 1.0 );
-  vec4 D( 0.5, -0.5, 1.0, 1.0 );
-  vec4 E( -0.5, -0.5, 1.0, 1.0 );
-  vec4 F( -0.75, 0, 1.0, 1.0 );
+  for (int i = 0; i < vertices.size(); i++) {
+    vertices[i].y += (offset);
+    vertices[i].x *= scale;
+    vertices[i].y *= scale;
+  }
 
+  Triangle one = Triangle(vertices[0], vertices[1], vertices[3], vec3(1, 1, 0.5));
+  Triangle two = Triangle(vertices[0], vertices[3], vertices[4], vec3(1, 1, 0.5));
+  Triangle three = Triangle(vertices[1], vertices[2], vertices[3], vec3(1, 1, 0.5));
+  Triangle four = Triangle(vertices[0], vertices[4], vertices[5], vec3(1, 1, 0.5));
 
-  hexagon.push_back(Aperture(A, B, C, D, E, F, vec3(0, 0, 1)));
-  hexagon[0].ComputeNormal();
+  hexagon.push_back(one);
+  hexagon.push_back(two);
+  hexagon.push_back(three);
+  hexagon.push_back(four);
+
 }
 
 #endif
