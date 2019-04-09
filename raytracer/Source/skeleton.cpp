@@ -256,6 +256,7 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   return D;
 }
 
+
 vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles){
   int maxDepth = 1;
   if (depth > maxDepth) return vec3(0,0,0);
