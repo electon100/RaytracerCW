@@ -16,13 +16,17 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 256
-#define FULLSCREEN_MODE true
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 720
+#define FULLSCREEN_MODE false
+#define _USE_MATH_DEFINES
 
 float xaw = 0.f;
 float yaw = 0.f;
 float zaw = 0.f;
+
+vec4 lightPos(0, -0.5, -0.7, 1.0);
+vec3 lightColour = 14.f * vec3(1, 1, 1);
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
@@ -36,6 +40,10 @@ bool Update(vec4& cameraPos, vector<Triangle>& triangles);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
+vec3 castRay(vec3 colour, vec4 normal, vec4 position, const vector<Triangle> triangles);
+void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb);
+vec3 uniformSampleHemisphere(const float &r1, const float &r2);
+bool FindClosestLight(const Intersection& i, Intersection& closestLight, const vector<Triangle> triangles);
 
 int main( int argc, char* argv[] )
 {
@@ -49,7 +57,7 @@ int main( int argc, char* argv[] )
   vector<Triangle> triangles;
   LoadTestModel(triangles);
   LoadBunnyModel(triangles);
-  LoadLightModel(triangles);
+  // LoadLightModel(triangles);
 
   mat4 R;
   while( Update(cameraPos, triangles) )
@@ -84,13 +92,28 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
     for (int x = 0; x < SCREEN_WIDTH; x++) {
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
+
       if (ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection)) {
         vec3 p = triangles[closestIntersection.triangleIndex].color;
+        Intersection closestLight = {
+          vec4(0, 0, 0, 0),
+          0.0f,
+          0
+        };
+        vec3 indirectLight = castRay(lightColour, triangles[closestLight.triangleIndex].normal, closestIntersection.position, triangles);
         vec3 D = DirectLight(closestIntersection, triangles);
-        vec3 indirectLight = 0.5f*vec3( 1, 1, 1);
-        PutPixelSDL(screen, x, y, p*(D+indirectLight));
+
+        if (FindClosestLight(closestIntersection, closestLight, triangles)){
+          float lightDistance = glm::distance(closestIntersection.position, lightPos);
+          float vectDistance = closestLight.distance;
+          vec3 lightColour = triangles[closestLight.triangleIndex].color;
+          if (vectDistance < lightDistance) { /* Case where the object is in shadow */
+            D = vec3(0, 0, 0);
+          }
+        }
+        PutPixelSDL(screen, x, y, p*(D + indirectLight));
       }
-      else {
+      else { /* Case where the ray does not hit an object */
         PutPixelSDL(screen, x, y, vec3(0, 0, 0));
       }
     }
@@ -212,9 +235,17 @@ bool ClosestIntersection(vec4 s, vec4 d, const vector<Triangle>& triangles, Inte
   }
 }
 
+bool FindClosestLight(const Intersection& i, Intersection& closestLight, const vector<Triangle> triangles) {
+  vec4 start = i.position + 0.001f * triangles[i.triangleIndex].normal;
+  vec4 directionToLight = lightPos - start;
+
+  if (ClosestIntersection(start, directionToLight, triangles, closestLight)){
+    return true;
+  }
+  else return false;
+}
+
 vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
-  vec4 lightPos(0, -0.5, -0.7, 1.0);
-  vec3 lightColour = 14.f * vec3(1, 1, 1);
 
   float r = glm::distance(i.position, lightPos);
   float A = 4 * M_PI * r * r;
@@ -223,21 +254,59 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   vec4 n = triangles[i.triangleIndex].normal;
   vec3 D = B * max(glm::dot(n, r_hat), 0.0f);
 
-  Intersection closestIntersection = {
-    vec4(0, 0, 0, 0),
-    0.0f,
-    0
-  };
-
-  vec4 start = i.position + 0.001f * triangles[i.triangleIndex].normal;
-  vec4 directionToLight = lightPos - start;
-  if (ClosestIntersection(start, directionToLight, triangles, closestIntersection)){
-    float lightDistance = r;
-    float vectDistance = closestIntersection.distance;
-    if (vectDistance < lightDistance) {
-      return vec3(0, 0, 0);
-    }
-    else return D;
-  }
   return D;
+}
+
+vec3 castRay(vec3 hitPointColour, vec4 normal, vec4 position, const vector<Triangle> triangles){
+
+  vec3 indirectLight = vec3(0, 0, 0);
+  int someNumberOfRays = 64;
+
+  // Compute space
+  vec3 Nt;
+  vec3 Nb;
+  createCoordinateSystem(normal, Nt, Nb);
+
+  for (int i = 0; i < someNumberOfRays; i++) {
+    float r1 = drand48();
+    float r2 = drand48();
+    vec3 sample = uniformSampleHemisphere(r1, r2);
+    vec3 sampleWorld = vec3(sample.x * Nb.x + sample.y * normal.x + sample.z * Nt.x,
+                            sample.x * Nb.y + sample.y * normal.y + sample.z * Nt.y,
+                            sample.x * Nb.z + sample.y * normal.z + sample.z * Nt.z);
+
+    vec4 start = vec4(sampleWorld, 1.0f);
+    vec4 direction = position - start;
+
+    Intersection closestObject = {
+      vec4(0, 0, 0, 0),
+      0.0f,
+      0
+    };
+
+    if (ClosestIntersection(start, direction, triangles, closestObject)) {
+      vec3 hitColour = triangles[closestObject.triangleIndex].color;
+      indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour;
+    }
+  }
+
+  indirectLight /= float(someNumberOfRays);
+
+  return indirectLight;
+}
+
+void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb) {
+  if (std::fabs(normal.x) > std::fabs(normal.y))
+    Nt = glm::normalize(vec3(normal.z, 0, -normal.x));
+  else
+    Nt = glm::normalize(vec3(0, -normal.z, normal.y));
+  Nb = cross(vec3(normal), Nt);
+}
+
+vec3 uniformSampleHemisphere(const float &r1, const float &r2) {
+  float sinTheta = sqrtf(1 - r1 * r1);
+  float phi = 2 * M_PI * r2;
+  float x = sinTheta * cosf(phi);
+  float z = sinTheta * sinf(phi);
+  return vec3(x, r1, z);
 }
