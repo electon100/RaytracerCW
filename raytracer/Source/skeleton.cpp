@@ -16,8 +16,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
 #define FULLSCREEN_MODE false
 #define _USE_MATH_DEFINES
 
@@ -56,7 +56,7 @@ int main( int argc, char* argv[] )
 
   vector<Triangle> triangles;
   LoadTestModel(triangles);
-  LoadBunnyModel(triangles);
+  // LoadBunnyModel(triangles);
   // LoadLightModel(triangles);
 
   mat4 R;
@@ -291,7 +291,6 @@ vec3 castRay(vec3 hitPointColour, vec4 normal, vec4 position, const vector<Trian
   }
 
   indirectLight /= float(someNumberOfRays);
-
   return indirectLight;
 }
 
@@ -303,7 +302,10 @@ void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb) {
   Nb = cross(vec3(normal), Nt);
 }
 
-vec3 uniformSampleHemisphere(const float &r1, const float &r2) {
+vec3 uniformSampleHemisphere(const float &r1, const float &r2)
+{
+  // cos(theta) = r1 = y
+  // cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
   float sinTheta = sqrtf(1 - r1 * r1);
   float phi = 2 * M_PI * r2;
   float x = sinTheta * cosf(phi);
