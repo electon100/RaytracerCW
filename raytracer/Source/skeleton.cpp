@@ -16,9 +16,9 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
-#define FULLSCREEN_MODE true
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
+#define FULLSCREEN_MODE false
 #define _USE_MATH_DEFINES
 
 float xaw = 0.f;
@@ -27,6 +27,11 @@ float zaw = 0.f;
 
 vec4 lightPos(0, -0.5, -0.7, 1.0);
 vec3 lightColour = 14.f * vec3(1, 1, 1);
+float z = -2.f;
+float focalLength = SCREEN_WIDTH/2;
+vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
+
+mat4 R;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
@@ -36,11 +41,11 @@ struct Intersection {
   int triangleIndex;
 };
 
-bool Update(vec4& cameraPos, vector<Triangle>& triangles);
-void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos);
+bool Update(vector<Triangle>& triangles);
+void Draw(screen* screen, float focalLength, vector<Triangle> triangles);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
-vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles);
+vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles, int material);
 void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb);
 vec3 uniformSampleHemisphere(const float &r1, const float &r2);
 bool FindClosestLight(const Intersection& i, Intersection& closestLight, const vector<Triangle> triangles);
@@ -51,19 +56,15 @@ int main( int argc, char* argv[] )
 
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
-  float z = -2.f;
-  float focalLength = SCREEN_WIDTH/2;
-  vec4 cameraPos ( 0.0f, 0.0f, z, 1.0f);
-
   vector<Triangle> triangles;
   LoadTestModel(triangles);
   // LoadBunnyModel(triangles);
   // LoadLightModel(triangles);
+  RotationMatrixByAngle(xaw, yaw, zaw, R);
 
-  mat4 R;
-  while( Update(cameraPos, triangles) )
+  while( Update(triangles) )
     {
-      Draw(screen, focalLength, triangles, cameraPos);
+      Draw(screen, focalLength, triangles);
       SDL_Renderframe(screen);
     }
   SDL_SaveImage( screen, "screenshot.bmp" );
@@ -73,7 +74,7 @@ int main( int argc, char* argv[] )
 }
 
 /*Place your drawing here*/
-void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 cameraPos)
+void Draw(screen* screen, float focalLength, vector<Triangle> triangles)
 {
   /* Clear buffer */
   memset(screen->buffer, 0, screen->height*screen->width*sizeof(uint32_t));
@@ -83,11 +84,6 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
     0.0f,
     0
   };
-
-  mat4 R ( cos(yaw)*cos(zaw), -cos(yaw)*sin(zaw) + sin(xaw)*sin(yaw)*cos(zaw), sin(xaw)*sin(zaw) + cos(xaw)*sin(yaw)*cos(zaw), 0,
-        cos(yaw)*sin(zaw), cos(xaw)*cos(zaw) + sin(xaw)*sin(yaw)*sin(zaw), -sin(xaw)*cos(zaw) + cos(xaw)*sin(yaw)*sin(zaw), 0,
-        -sin(yaw)        , sin(xaw)*cos(yaw)                              , cos(xaw)*cos(yaw)                             , 0,
-        0                , 0                                              , 0                                             , 1);
 
   vec4 tmp_cameraPos = R * cameraPos;
   for (int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -101,7 +97,8 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
           0.0f,
           0
         };
-        vec3 indirectLight = castRay(triangles[closestLight.triangleIndex].normal, closestIntersection.position, 0, triangles);
+        int material = triangles[closestIntersection.triangleIndex].material;
+        vec3 indirectLight = castRay(triangles[closestIntersection.triangleIndex].normal, closestIntersection.position, 0, triangles, material);
         vec3 D = DirectLight(closestIntersection, triangles);
 
         if (FindClosestLight(closestIntersection, closestLight, triangles)){
@@ -111,7 +108,15 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
             D = vec3(0, 0, 0);
           }
         }
-        PutPixelSDL(screen, x, y, p*(D + indirectLight));
+
+        switch (triangles[closestIntersection.triangleIndex].material) {
+          case 0:
+            PutPixelSDL(screen, x, y, p*(D + indirectLight));
+            break;
+          case 1:
+            PutPixelSDL(screen, x, y, (D + indirectLight));
+            break;
+        }
       }
       else { /* Case where the ray does not hit an object */
         PutPixelSDL(screen, x, y, vec3(0, 0, 0));
@@ -121,7 +126,7 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles, vec4 ca
 }
 
 /*Place updates of parameters here*/
-bool Update(vec4& cameraPos, vector<Triangle>& triangles)
+bool Update(vector<Triangle>& triangles)
 {
   static int t = SDL_GetTicks();
   /* Compute frame time */
@@ -258,56 +263,63 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
 }
 
 vec4 reflect(const vec4 &I, const vec4 &N) {
-    return I - 2 * dot(I, N) * N;
+    return I - 2 * dot(N, I) * N;
 }
 
-vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles){
-  int maxDepth = 2;
+vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles, int material){
+  int maxDepth = 1;
   if (depth > maxDepth) return vec3(0,0,0);
 
   vec3 indirectLight = vec3(0, 0, 0);
-  int someNumberOfRays = 64;
-
-  // Compute space
+  vec3 hitColour = vec3(0, 0, 0);
+  int someNumberOfRays = 16;
   vec3 Nt;
   vec3 Nb;
-  createCoordinateSystem(normal, Nt, Nb);
 
-  for (int i = 0; i < someNumberOfRays; i++) {
-    float r1 = drand48();
-    float r2 = drand48();
-    vec3 sample = uniformSampleHemisphere(r1, r2);
-    vec3 sampleWorld = vec3(sample.x * Nb.x + sample.y * normal.x + sample.z * Nt.x,
-                            sample.x * Nb.y + sample.y * normal.y + sample.z * Nt.y,
-                            sample.x * Nb.z + sample.y * normal.z + sample.z * Nt.z);
+  Intersection closestObject = {
+    vec4(0, 0, 0, 0),
+    0.0f,
+    0
+  };
 
-    vec4 start = vec4(sampleWorld, 1.0f);
-    vec4 direction = position - start;
+  switch (material) {
+    case 0: /* Diffuse material */
+      // Compute space
 
-    Intersection closestObject = {
-      vec4(0, 0, 0, 0),
-      0.0f,
-      0
-    };
+      createCoordinateSystem(normal, Nt, Nb);
 
-    if (ClosestIntersection(start, direction, triangles, closestObject)) {
-      vec3 hitColour = triangles[closestObject.triangleIndex].color;
-      int material = triangles[closestObject.triangleIndex].material;
+      for (int i = 0; i < someNumberOfRays; i++) {
+        float r1 = drand48();
+        float r2 = drand48();
+        vec3 sample = uniformSampleHemisphere(r1, r2);
+        vec3 sampleWorld = vec3(sample.x * Nb.x + sample.y * normal.x + sample.z * Nt.x,
+                                sample.x * Nb.y + sample.y * normal.y + sample.z * Nt.y,
+                                sample.x * Nb.z + sample.y * normal.z + sample.z * Nt.z);
 
-      switch (material) {
-        case 0:
-          indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles);
-          break;
-        case 1:
-          vec4 closestNormal = triangles[closestObject.triangleIndex].normal;
-          vec4 R = reflect(closestObject.position, closestNormal);
-          indirectLight += 0.8f * castRay(closestObject.position + closestNormal, R, depth+1, triangles);
-          break;
+        vec4 start = vec4(sampleWorld, 1.0f);
+        vec4 direction = position - start;
+
+        if (ClosestIntersection(start, direction, triangles, closestObject)) {
+          hitColour = triangles[closestObject.triangleIndex].color;
+          indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles, material);
+        }
       }
-    }
-  }
 
-  indirectLight /= float(someNumberOfRays);
+      indirectLight /= float(someNumberOfRays);
+      break;
+    case 1: /* Mirror material */
+      vec4 reflectedVector = reflect(position - R*cameraPos, normal);
+      vec4 reflectedDirection = reflectedVector - (position - R*cameraPos);
+      if (ClosestIntersection(position, reflectedVector, triangles, closestObject)) {
+        if (triangles[closestObject.triangleIndex].material == 0) {
+          hitColour = triangles[closestObject.triangleIndex].color;
+        }
+        vec4 closestNormal = triangles[closestObject.triangleIndex].normal;
+        indirectLight += 0.8f * hitColour; //+ castRay(closestNormal + closestObject.position, reflectedVector, depth+1, triangles, material);
+      }
+      break;
+    }
+
   return indirectLight;
 }
 
