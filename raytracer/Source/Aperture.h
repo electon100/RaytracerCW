@@ -36,10 +36,10 @@ void LoadApertureHexagon(vector<Triangle> &hexagon, float scale, float offset) {
     vertices[i].y *= scale;
   }
 
-  Triangle one = Triangle(vertices[0], vertices[1], vertices[3], vec3(1, 1, 0.5));
-  Triangle two = Triangle(vertices[0], vertices[3], vertices[4], vec3(1, 1, 0.5));
-  Triangle three = Triangle(vertices[1], vertices[2], vertices[3], vec3(1, 1, 0.5));
-  Triangle four = Triangle(vertices[0], vertices[4], vertices[5], vec3(1, 1, 0.5));
+  Triangle one = Triangle(vertices[0], vertices[1], vertices[3], vec3(1, 1, 0.5), 0);
+  Triangle two = Triangle(vertices[0], vertices[3], vertices[4], vec3(1, 1, 0.5), 0);
+  Triangle three = Triangle(vertices[1], vertices[2], vertices[3], vec3(1, 1, 0.5), 0);
+  Triangle four = Triangle(vertices[0], vertices[4], vertices[5], vec3(1, 1, 0.5), 0);
 
   hexagon.push_back(one);
   hexagon.push_back(two);

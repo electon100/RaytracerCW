@@ -16,9 +16,9 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 256
-#define FULLSCREEN_MODE false
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 720
+#define FULLSCREEN_MODE true
 #define _USE_MATH_DEFINES
 
 float xaw = 0.f;
@@ -44,6 +44,7 @@ vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> trian
 void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb);
 vec3 uniformSampleHemisphere(const float &r1, const float &r2);
 bool FindClosestLight(const Intersection& i, Intersection& closestLight, const vector<Triangle> triangles);
+vec4 reflect(const vec4 &I, const vec4 &N);
 
 int main( int argc, char* argv[] )
 {
@@ -256,13 +257,16 @@ vec3 DirectLight(const Intersection& i, const vector<Triangle> triangles){
   return D;
 }
 
+vec4 reflect(const vec4 &I, const vec4 &N) {
+    return I - 2 * dot(I, N) * N;
+}
 
 vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles){
-  int maxDepth = 1;
+  int maxDepth = 2;
   if (depth > maxDepth) return vec3(0,0,0);
 
   vec3 indirectLight = vec3(0, 0, 0);
-  int someNumberOfRays = 16;
+  int someNumberOfRays = 64;
 
   // Compute space
   vec3 Nt;
@@ -288,7 +292,18 @@ vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> trian
 
     if (ClosestIntersection(start, direction, triangles, closestObject)) {
       vec3 hitColour = triangles[closestObject.triangleIndex].color;
-      indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles);
+      int material = triangles[closestObject.triangleIndex].material;
+
+      switch (material) {
+        case 0:
+          indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles);
+          break;
+        case 1:
+          vec4 closestNormal = triangles[closestObject.triangleIndex].normal;
+          vec4 R = reflect(closestObject.position, closestNormal);
+          indirectLight += 0.8f * castRay(closestObject.position + closestNormal, R, depth+1, triangles);
+          break;
+      }
     }
   }
 

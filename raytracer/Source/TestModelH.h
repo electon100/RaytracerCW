@@ -28,9 +28,9 @@ public:
 	glm::vec4 v2;
 	glm::vec4 normal;
 	glm::vec3 color;
-	string material;
+	int material;
 
-	Triangle( glm::vec4 v0, glm::vec4 v1, glm::vec4 v2, glm::vec3 color, string material )
+	Triangle( glm::vec4 v0, glm::vec4 v1, glm::vec4 v2, glm::vec3 color, int material )
 		: v0(v0), v1(v1), v2(v2), color(color), material(material)
 	{
 		ComputeNormal();
@@ -90,24 +90,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	vec4 H(0,L,L,1);
 
 	// Floor:
-	triangles.push_back( Triangle( C, B, A, green, "diffuse" ) );
-	triangles.push_back( Triangle( C, D, B, green, "diffuse" ) );
+	triangles.push_back( Triangle( C, B, A, green, 0 ) );
+	triangles.push_back( Triangle( C, D, B, green, 0 ) );
 
 	// Left wall
-	triangles.push_back( Triangle( A, E, C, purple, "diffuse" ) );
-	triangles.push_back( Triangle( C, E, G, purple, "diffuse" ) );
+	triangles.push_back( Triangle( A, E, C, purple, 0 ) );
+	triangles.push_back( Triangle( C, E, G, purple, 0 ) );
 
 	// Right wall
-	triangles.push_back( Triangle( F, B, D, yellow, "diffuse" ) );
-	triangles.push_back( Triangle( H, F, D, yellow, "diffuse" ) );
+	triangles.push_back( Triangle( F, B, D, yellow, 0 ) );
+	triangles.push_back( Triangle( H, F, D, yellow, 0 ) );
 
 	// Ceiling
-	triangles.push_back( Triangle( E, F, G, cyan, "diffuse" ) );
-	triangles.push_back( Triangle( F, H, G, cyan, "diffuse" ) );
+	triangles.push_back( Triangle( E, F, G, cyan, 0 ) );
+	triangles.push_back( Triangle( F, H, G, cyan, 0 ) );
 
 	// Back wall
-	triangles.push_back( Triangle( G, D, C, white, "diffuse" ) );
-	triangles.push_back( Triangle( G, H, D, white, "diffuse" ) );
+	triangles.push_back( Triangle( G, D, C, white, 0 ) );
+	triangles.push_back( Triangle( G, H, D, white, 0 ) );
 
 	// ---------------------------------------------------------------------------
 	// Short block
@@ -123,24 +123,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec4( 82,165,225,1);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,red, "mirror") );
-	triangles.push_back( Triangle(E,F,B,red, "mirror") );
+	triangles.push_back( Triangle(E,B,A,red, 1) );
+	triangles.push_back( Triangle(E,F,B,red, 1) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,red, "mirror") );
-	triangles.push_back( Triangle(F,H,D,red, "mirror") );
+	triangles.push_back( Triangle(F,D,B,red, 1) );
+	triangles.push_back( Triangle(F,H,D,red, 1) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,red, "diffuse") );
-	triangles.push_back( Triangle(H,G,C,red, "diffuse") );
+	triangles.push_back( Triangle(H,C,D,red, 0) );
+	triangles.push_back( Triangle(H,G,C,red, 0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,red, "mirror") );
-	triangles.push_back( Triangle(E,A,C,red, "mirror") );
+	triangles.push_back( Triangle(G,E,C,red, 1) );
+	triangles.push_back( Triangle(E,A,C,red, 1) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,red, "diffuse") );
-	triangles.push_back( Triangle(G,H,F,red, "diffuse") );
+	triangles.push_back( Triangle(G,F,E,red, 0) );
+	triangles.push_back( Triangle(G,H,F,red, 0) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -156,24 +156,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec4(314,330,456,1);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,blue, "diffuse") );
-	triangles.push_back( Triangle(E,F,B,blue, "diffuse") );
+	triangles.push_back( Triangle(E,B,A,blue, 0) );
+	triangles.push_back( Triangle(E,F,B,blue, 0) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,blue, "diffuse") );
-	triangles.push_back( Triangle(F,H,D,blue, "diffuse") );
+	triangles.push_back( Triangle(F,D,B,blue, 0) );
+	triangles.push_back( Triangle(F,H,D,blue, 0) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,blue, "diffuse") );
-	triangles.push_back( Triangle(H,G,C,blue, "diffuse") );
+	triangles.push_back( Triangle(H,C,D,blue, 0) );
+	triangles.push_back( Triangle(H,G,C,blue, 0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,blue, "diffuse") );
-	triangles.push_back( Triangle(E,A,C,blue, "diffuse") );
+	triangles.push_back( Triangle(G,E,C,blue, 0) );
+	triangles.push_back( Triangle(E,A,C,blue, 0) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,blue, "diffuse") );
-	triangles.push_back( Triangle(G,H,F,blue, "diffuse") );
+	triangles.push_back( Triangle(G,F,E,blue, 0) );
+	triangles.push_back( Triangle(G,H,F,blue, 0) );
 
 
 	// ----------------------------------------------
@@ -226,7 +226,7 @@ void LoadBunnyModel( std::vector<Triangle>& model ) {
       float a, b, c;
       if (!(iss >> a >> b >> c)) { break; }
 
-      model.push_back(Triangle(temp_vertices[a-1], temp_vertices[b-1], temp_vertices[c-1], vec3(1, 1, 1)));
+      model.push_back(Triangle(temp_vertices[a-1], temp_vertices[b-1], temp_vertices[c-1], vec3(1, 1, 1), 0));
 
     }
   }
