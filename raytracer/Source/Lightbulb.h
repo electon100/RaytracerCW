@@ -19,7 +19,7 @@ void LoadLightModel(vector<Triangle>& model) {
   vector<vec4> temp_vertices;
   vector<int> elements;
 
-  std::ifstream infile("light.obj");
+  std::ifstream infile("sphere.obj");
   if (!infile) {
     cerr << "Cannot open file" << endl; exit(1);
   }
@@ -41,7 +41,7 @@ void LoadLightModel(vector<Triangle>& model) {
       f = stoi(c.substr(0, c.find("/")));
 
       d--; e--; f--;
-      model.push_back(Triangle(temp_vertices[d], temp_vertices[e], temp_vertices[f], vec3(1, 1, 1), 0));
+      model.push_back(Triangle(temp_vertices[d], temp_vertices[e], temp_vertices[f], vec3(1, 1, 1), 1));
     } else {
       /* Ignoring any other line */
     }
@@ -49,9 +49,9 @@ void LoadLightModel(vector<Triangle>& model) {
 
   for( size_t i=prevIndex; i<model.size(); ++i )
   {
-    model[i].v0 /= 10;
-    model[i].v1 /= 10;
-    model[i].v2 /= 10;
+    model[i].v0 /= 5;
+    model[i].v1 /= 5;
+    model[i].v2 /= 5;
 
 		model[i].v0 += vec4(1,1,1,1);
 		model[i].v1 += vec4(1,1,1,1);
@@ -73,9 +73,9 @@ void LoadLightModel(vector<Triangle>& model) {
 		model[i].v1.w = 1.0;
 		model[i].v2.w = 1.0;
 
-    model[i].v0 -= vec4(0,0.9,0,0);
-		model[i].v1 -= vec4(0,0.9,0,0);
-		model[i].v2 -= vec4(0,0.9,0,0);
+    model[i].v0 -= vec4(0,0,0,0);
+		model[i].v1 -= vec4(0,0,0,0);
+		model[i].v2 -= vec4(0,0,0,0);
 
     model[i].ComputeNormal();
   }
