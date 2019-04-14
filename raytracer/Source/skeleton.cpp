@@ -45,7 +45,7 @@ bool Update(vector<Triangle>& triangles);
 void Draw(screen* screen, float focalLength, vector<Triangle> triangles);
 bool ClosestIntersection(vec4 start, vec4 dir, const vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 DirectLight( const Intersection& i, const vector<Triangle> triangles);
-vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles, int material);
+vec3 castRay(const Intersection& i, Intersection& intersection, int depth, const vector<Triangle> triangles, int material);
 void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb);
 vec3 uniformSampleHemisphere(const float &r1, const float &r2);
 bool FindClosestLight(const Intersection& i, Intersection& closestLight, const vector<Triangle> triangles);
@@ -59,8 +59,7 @@ int main( int argc, char* argv[] )
   vector<Triangle> triangles;
   LoadTestModel(triangles);
   // LoadBunnyModel(triangles);
-  // LoadLightModel(triangles);
-  RotationMatrixByAngle(xaw, yaw, zaw, R);
+  LoadLightModel(triangles);
 
   while( Update(triangles) )
     {
@@ -91,30 +90,16 @@ void Draw(screen* screen, float focalLength, vector<Triangle> triangles)
       vec4 direction = vec4(x-SCREEN_WIDTH/2, y-SCREEN_HEIGHT/2, focalLength, 1.0f);
 
       if (ClosestIntersection(tmp_cameraPos, R * direction, triangles, closestIntersection)) {
-        vec3 p = triangles[closestIntersection.triangleIndex].color;
-        Intersection closestLight = {
-          vec4(0, 0, 0, 0),
-          0.0f,
-          0
-        };
         int material = triangles[closestIntersection.triangleIndex].material;
-        vec3 indirectLight = castRay(triangles[closestIntersection.triangleIndex].normal, closestIntersection.position, 0, triangles, material);
         vec3 D = DirectLight(closestIntersection, triangles);
-
-        if (FindClosestLight(closestIntersection, closestLight, triangles)){
-          float lightDistance = glm::distance(closestIntersection.position, lightPos);
-          float vectDistance = closestLight.distance;
-          if (vectDistance < lightDistance) { /* Case where the object is in shadow */
-            D = vec3(0, 0, 0);
-          }
-        }
+        vec3 lightsToColour = castRay(closestIntersection, closestIntersection, 0, triangles, material);
 
         switch (triangles[closestIntersection.triangleIndex].material) {
           case 0:
-            PutPixelSDL(screen, x, y, p*(D + indirectLight));
+            PutPixelSDL(screen, x, y, lightsToColour);
             break;
           case 1:
-            PutPixelSDL(screen, x, y, (D + indirectLight));
+            PutPixelSDL(screen, x, y, lightsToColour);
             break;
         }
       }
@@ -182,7 +167,7 @@ bool Update(vector<Triangle>& triangles)
       }
     }
   }
-
+  RotationMatrixByAngle(xaw, yaw, zaw, R);
   return true;
 }
 
@@ -266,17 +251,28 @@ vec4 reflect(const vec4 &I, const vec4 &N) {
     return I - 2 * dot(N, I) * N;
 }
 
-vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> triangles, int material){
-  int maxDepth = 1;
+vec3 castRay(const Intersection& initialIntersect, Intersection& i, int depth, const vector<Triangle> triangles, int material){
+  int maxDepth = 2;
   if (depth > maxDepth) return vec3(0,0,0);
 
   vec3 indirectLight = vec3(0, 0, 0);
   vec3 hitColour = vec3(0, 0, 0);
-  int someNumberOfRays = 16;
+  vec3 returnColour = vec3(0, 0, 0);
+  int someNumberOfRays = 128;
   vec3 Nt;
   vec3 Nb;
 
+  vec3 D;
+  vec4 normal = triangles[i.triangleIndex].normal;
+  vec4 position = i.position;
+
   Intersection closestObject = {
+    vec4(0, 0, 0, 0),
+    0.0f,
+    0
+  };
+
+  Intersection closestLight = {
     vec4(0, 0, 0, 0),
     0.0f,
     0
@@ -285,9 +281,9 @@ vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> trian
   switch (material) {
     case 0: /* Diffuse material */
       // Compute space
-
       createCoordinateSystem(normal, Nt, Nb);
 
+      // Create vectors at random directions and see what they hit
       for (int i = 0; i < someNumberOfRays; i++) {
         float r1 = drand48();
         float r2 = drand48();
@@ -299,14 +295,30 @@ vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> trian
         vec4 start = vec4(sampleWorld, 1.0f);
         vec4 direction = position - start;
 
+        // Get the hit object's colour and add it on to the final colour
         if (ClosestIntersection(start, direction, triangles, closestObject)) {
           hitColour = triangles[closestObject.triangleIndex].color;
-          indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles, material);
+          indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour; //+ castRay(triangles[closestObject.triangleIndex].normal, closestObject.position, depth+1, triangles, material);
         }
       }
 
+      // Check if that object is lit by the light source
+      D = DirectLight(initialIntersect, triangles);
+      if (FindClosestLight(initialIntersect, closestLight, triangles)){
+        float lightDistance = glm::distance(initialIntersect.position, lightPos);
+        float vectDistance = closestLight.distance;
+        if (vectDistance < lightDistance && triangles[initialIntersect.triangleIndex].material != 1) { /* Case where the object is in shadow */
+          D = vec3(0, 0, 0);
+        }
+      }
+
+      // Normalise illumination
       indirectLight /= float(someNumberOfRays);
+
+      // Return colour is the triangle's original colour plus the illumination it receives
+      returnColour = triangles[i.triangleIndex].color * (D + indirectLight);
       break;
+
     case 1: /* Mirror material */
       vec4 reflectedVector = reflect(position - R*cameraPos, normal);
       vec4 reflectedDirection = reflectedVector - (position - R*cameraPos);
@@ -314,13 +326,24 @@ vec3 castRay(vec4 normal, vec4 position, int depth, const vector<Triangle> trian
         if (triangles[closestObject.triangleIndex].material == 0) {
           hitColour = triangles[closestObject.triangleIndex].color;
         }
-        vec4 closestNormal = triangles[closestObject.triangleIndex].normal;
-        indirectLight += 0.8f * hitColour; //+ castRay(closestNormal + closestObject.position, reflectedVector, depth+1, triangles, material);
+
+        vec3 newColourIndirect = castRay(initialIntersect, closestObject, 0, triangles, 0);
+
+        D = DirectLight(closestObject, triangles);
+        if (FindClosestLight(closestObject, closestLight, triangles)){
+          float lightDistance = glm::distance(closestObject.position, lightPos);
+          float vectDistance = closestLight.distance;
+          if (vectDistance < lightDistance) { /* Case where the object is in shadow */
+            D = vec3(0, 0, 0);
+          }
+        }
+        returnColour = 0.9f * triangles[closestObject.triangleIndex].color * ( D + newColourIndirect);
       }
+
       break;
     }
 
-  return indirectLight;
+  return returnColour;
 }
 
 void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb) {
