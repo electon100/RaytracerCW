@@ -15,8 +15,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 100
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
 #define FULLSCREEN_MODE false
 #define _USE_MATH_DEFINES
 
@@ -216,7 +216,7 @@ vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector
       case 0: /* diffuse */
         directLight = GetDirectLightForPixel(position, normal, objects, lights);
         indirectLight = GetIndirectLightForPixel(position, normal, objects, 0);
-        returnColour = colour * (directLight + indirectLight);
+        returnColour = colour * (indirectLight);
         break;
       case 2: /* mirror */
         bias = 0.001f*normal;
@@ -287,7 +287,7 @@ vec3 GetDirectLightForPixel(const vec4 position, const vec4 normal, const vector
 }
 
 vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Object>& objects, int depth) {
-  int maxDepth = 0;
+  int maxDepth = 5;
   if (depth > maxDepth) return vec3(0, 0, 0);
 
   int someNumberOfRays = 32;
@@ -321,9 +321,9 @@ vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Obj
     if (ClosestIntersection(start + 0.001f * normal, direction, objects, closestObject)) {
       hitColour = objects[closestObject.objectIndex].color;
       int material = objects[closestObject.objectIndex].material;
-      // if (material == 4) {
-      //   lightFromSource += vec3(0.95, 0.95, 0.95);
-      // }
+      if (material == 4) {
+        lightFromSource += vec3(0.95, 0.95, 0.95);
+      }
       indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + GetIndirectLightForPixel(closestObject.position, objects[closestObject.objectIndex].normal, objects, depth+1);
     }
   }
