@@ -19,21 +19,27 @@ using glm::vec4;
 using glm::mat4;
 using glm::vec2;
 
-// Used to describe a triangular surface:
-class Triangle
+// Used to describe a triangular or spherical surface:
+class Object
 {
 public:
 	glm::vec4 v0;
 	glm::vec4 v1;
 	glm::vec4 v2;
+	float radius;
 	glm::vec4 normal;
 	glm::vec3 color;
+	string type;
 	int material;
 
-	Triangle( glm::vec4 v0, glm::vec4 v1, glm::vec4 v2, glm::vec3 color, int material )
-		: v0(v0), v1(v1), v2(v2), color(color), material(material)
+	Object( glm::vec4 v0, glm::vec4 v1, glm::vec4 v2, float radius, glm::vec3 color, string type, int material )
+		: v0(v0), v1(v1), v2(v2), radius(radius), color(color), type(type), material(material)
 	{
-		ComputeNormal();
+		if (type == "triangle") {
+			ComputeNormal();
+		} else if (type == "sphere") {
+			ComputeSphereNormal();
+		}
 	}
 
 	void ReverseNormal() {
@@ -41,8 +47,11 @@ public:
 		normal.w *= -1;
 	}
 
-	void ComputeNormal()
-	{
+	void ComputeSphereNormal() {
+
+	}
+
+	void ComputeNormal() {
 	  glm::vec3 e1 = glm::vec3(v1.x-v0.x,v1.y-v0.y,v1.z-v0.z);
 	  glm::vec3 e2 = glm::vec3(v2.x-v0.x,v2.y-v0.y,v2.z-v0.z);
 	  glm::vec3 normal3 = glm::normalize( glm::cross( e2, e1 ) );
@@ -57,8 +66,7 @@ public:
 // -1 <= x <= +1
 // -1 <= y <= +1
 // -1 <= z <= +1
-void LoadTestModel( std::vector<Triangle>& triangles )
-{
+void LoadTestModel( std::vector<Object>& objects ) {
 	using glm::vec3;
 	using glm::vec4;
 
@@ -69,10 +77,13 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	vec3 cyan(   0.15f, 0.75f, 0.75f );
 	vec3 blue(   0.15f, 0.15f, 0.75f );
 	vec3 purple( 0.75f, 0.15f, 0.75f );
-	vec3 white(  0.75f, 0.75f, 0.75f );
+	vec3 gray(   0.75f, 0.75f, 0.75f );
+	vec3 white(  0.95f, 0.95f, 0.95f );
+	vec3 pink(     1.f, 0.75f, 0.79f );
+	vec3 violet( 0.57f, 0.44f, 0.85f );
 
-	triangles.clear();
-	triangles.reserve( 5*2*3 );
+	objects.clear();
+	objects.reserve( 5*2*3 );
 
 	// ---------------------------------------------------------------------------
 	// Room
@@ -90,24 +101,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	vec4 H(0,L,L,1);
 
 	// Floor:
-	triangles.push_back( Triangle( C, B, A, green, 0 ) );
-	triangles.push_back( Triangle( C, D, B, green, 0 ) );
+	objects.push_back( Object( C, B, A, 0.f, gray, "triangle", 0 ) );
+	objects.push_back( Object( C, D, B, 0.f, gray, "triangle", 0 ) );
 
 	// Left wall
-	triangles.push_back( Triangle( A, E, C, purple, 0 ) );
-	triangles.push_back( Triangle( C, E, G, purple, 0 ) );
+	objects.push_back( Object( A, E, C, 0.f, pink, "triangle", 0 ) );
+	objects.push_back( Object( C, E, G, 0.f, pink, "triangle", 0 ) );
 
 	// Right wall
-	triangles.push_back( Triangle( F, B, D, yellow, 1 ) );
-	triangles.push_back( Triangle( H, F, D, yellow, 1 ) );
+	objects.push_back( Object( F, B, D, 0.f, violet, "triangle", 0 ) );
+	objects.push_back( Object( H, F, D, 0.f, violet, "triangle", 0 ) );
 
 	// Ceiling
-	triangles.push_back( Triangle( E, F, G, cyan, 0 ) );
-	triangles.push_back( Triangle( F, H, G, cyan, 0 ) );
+	objects.push_back( Object( E, F, G, 0.f, gray, "triangle", 0 ) );
+	objects.push_back( Object( F, H, G, 0.f, gray, "triangle", 0 ) );
 
 	// Back wall
-	triangles.push_back( Triangle( G, D, C, white, 0 ) );
-	triangles.push_back( Triangle( G, H, D, white, 0 ) );
+	objects.push_back( Object( G, D, C, 0.f, gray, "triangle", 0 ) );
+	objects.push_back( Object( G, H, D, 0.f, gray, "triangle", 0 ) );
 
 	// ---------------------------------------------------------------------------
 	// Short block
@@ -123,24 +134,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec4( 82,165,225,1);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,red, 0) );
-	triangles.push_back( Triangle(E,F,B,red, 0) );
+	objects.push_back( Object(E,B,A, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(E,F,B, 0.f, pink, "triangle", 0) );
 
-	// Front
-	triangles.push_back( Triangle(F,D,B,red, 0) );
-	triangles.push_back( Triangle(F,H,D,red, 0) );
+	// RIGHT
+	objects.push_back( Object(F,D,B, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(F,H,D, 0.f, pink, "triangle", 0) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,red, 0) );
-	triangles.push_back( Triangle(H,G,C,red, 0) );
+	objects.push_back( Object(H,C,D, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(H,G,C, 0.f, pink, "triangle", 0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,red, 0) );
-	triangles.push_back( Triangle(E,A,C,red, 0) );
+	objects.push_back( Object(G,E,C, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(E,A,C, 0.f, pink, "triangle", 0) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,red, 0) );
-	triangles.push_back( Triangle(G,H,F,red, 0) );
+	objects.push_back( Object(G,F,E, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(G,H,F, 0.f, pink, "triangle", 0) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -156,56 +167,55 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec4(314,330,456,1);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,blue, 0) );
-	triangles.push_back( Triangle(E,F,B,blue, 0) );
+	objects.push_back( Object(E,B,A,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(E,F,B,0.f, violet, "triangle", 0) );
 
-	// Front
-	triangles.push_back( Triangle(F,D,B,blue, 0) );
-	triangles.push_back( Triangle(F,H,D,blue, 0) );
+	// RIGHT
+	objects.push_back( Object(F,D,B,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(F,H,D,0.f, violet, "triangle", 0) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,blue, 0) );
-	triangles.push_back( Triangle(H,G,C,blue, 0) );
+	objects.push_back( Object(H,C,D,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(H,G,C,0.f, violet, "triangle", 0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,blue, 0) );
-	triangles.push_back( Triangle(E,A,C,blue, 0) );
+	objects.push_back( Object(G,E,C,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(E,A,C,0.f, violet, "triangle", 0) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,blue, 0) );
-	triangles.push_back( Triangle(G,H,F,blue, 0) );
-
+	objects.push_back( Object(G,F,E,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(G,H,F,0.f, violet, "triangle", 0) );
 
 	// ----------------------------------------------
 	// Scale to the volume [-1,1]^3
 
-	for( size_t i=0; i<triangles.size(); ++i )
+	for( size_t i=0; i<objects.size(); ++i )
 	{
-		triangles[i].v0 *= 2/L;
-		triangles[i].v1 *= 2/L;
-		triangles[i].v2 *= 2/L;
+		objects[i].v0 *= 2/L;
+		objects[i].v1 *= 2/L;
+		objects[i].v2 *= 2/L;
 
-		triangles[i].v0 -= vec4(1,1,1,1);
-		triangles[i].v1 -= vec4(1,1,1,1);
-		triangles[i].v2 -= vec4(1,1,1,1);
+		objects[i].v0 -= vec4(1,1,1,1);
+		objects[i].v1 -= vec4(1,1,1,1);
+		objects[i].v2 -= vec4(1,1,1,1);
 
-		triangles[i].v0.x *= -1;
-		triangles[i].v1.x *= -1;
-		triangles[i].v2.x *= -1;
+		objects[i].v0.x *= -1;
+		objects[i].v1.x *= -1;
+		objects[i].v2.x *= -1;
 
-		triangles[i].v0.y *= -1;
-		triangles[i].v1.y *= -1;
-		triangles[i].v2.y *= -1;
+		objects[i].v0.y *= -1;
+		objects[i].v1.y *= -1;
+		objects[i].v2.y *= -1;
 
-		triangles[i].v0.w = 1.0;
-		triangles[i].v1.w = 1.0;
-		triangles[i].v2.w = 1.0;
+		objects[i].v0.w = 1.0;
+		objects[i].v1.w = 1.0;
+		objects[i].v2.w = 1.0;
 
-		triangles[i].ComputeNormal();
+		objects[i].ComputeNormal();
 	}
 }
 
-void LoadBunnyModel( std::vector<Triangle>& model ) {
+void LoadBunnyModel( std::vector<Object>& model ) {
 
   vector<vec4> temp_vertices;
 	int prevIndex = model.size();
@@ -226,7 +236,7 @@ void LoadBunnyModel( std::vector<Triangle>& model ) {
       float a, b, c;
       if (!(iss >> a >> b >> c)) { break; }
 
-      model.push_back(Triangle(temp_vertices[a-1], temp_vertices[b-1], temp_vertices[c-1], vec3(1, 1, 1), 0));
+      model.push_back(Object(temp_vertices[a-1], temp_vertices[b-1], temp_vertices[c-1], 0.f, vec3(1, 1, 1), "triangle", 2));
 
     }
   }
@@ -234,7 +244,7 @@ void LoadBunnyModel( std::vector<Triangle>& model ) {
   // ----------------------------------------------
   // Scale to the volume [-1,1]^3
 	mat4 R;
-	RotationMatrixByAngle(0.0f, 90.0f, 0.0f, R);
+	RotationMatrixByAngle(0.0f, -35.0f, 0.0f, R);
 
   for( size_t i=prevIndex; i<model.size(); ++i )
   {
@@ -267,13 +277,18 @@ void LoadBunnyModel( std::vector<Triangle>& model ) {
 		model[i].v1.w = 1.0;
 		model[i].v2.w = 1.0;
 
-		model[i].v0 += vec4(0,0.6,0.1,0);
-		model[i].v1 += vec4(0,0.6,0.1,0);
-		model[i].v2 += vec4(0,0.6,0.1,0);
+		model[i].v0 += vec4(0.,0.6,0.1,0);
+		model[i].v1 += vec4(0.,0.6,0.1,0);
+		model[i].v2 += vec4(0.,0.6,0.1,0);
 
     model[i].ComputeNormal();
 		model[i].ReverseNormal();
   }
+}
+
+void LoadSphereModel(vector<Object>& objects, vec3 offset, float radius, int material) {
+	Object sphere = Object(vec4(offset.x,offset.y,offset.z,1), vec4(0,0,0,1), vec4(0,0,0,1), radius, vec3(1, 1, 1), "sphere", material);
+	objects.push_back(sphere);
 }
 
 #endif
