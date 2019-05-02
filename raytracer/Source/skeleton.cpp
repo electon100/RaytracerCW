@@ -15,8 +15,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 100
 #define FULLSCREEN_MODE false
 #define _USE_MATH_DEFINES
 
@@ -31,7 +31,6 @@ float yaw = 0.f;
 float zaw = 0.f;
 
 vec4 lightPos(0, -0.5, 0.f, 1.0);
-vec4 reflectPos(-1.5, -0.5, -0.7, 1.0);
 vec3 lightColour = 7.f * vec3(1, 1, 1);
 float z = -2.f;
 float focalLength = SCREEN_WIDTH/2;
@@ -68,19 +67,21 @@ int main( int argc, char* argv[] ) {
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
   vector<Light> lights;
-  LoadLights(lights);
 
   vector<Object> objects;
   LoadTestModel(objects);
+  LoadLights(objects);
+  lightPos = (objects[objects.size()-1].v0 + objects[objects.size()-1].v1 + objects[objects.size()-1].v2 + objects[objects.size()-2].v2)/4.f;
+  lightPos.y += 0.01f;
   LoadSphereModel(objects, vec3(0.4f, -0.1f, 0.1f), 0.1f, 2);
-  LoadSphereModel(objects, vec3(-0.4f, 0.6f, -0.7f), 0.1f, 3);
+  LoadSphereModel(objects, vec3(-0.4f, 0.6f, -0.4f), 0.1f, 3);
   // LoadBunnyModel(objects);
   // LoadSphereModel(objects, vec3(0.5f, 0.67f, 0.f), 0.1f, 3);
 
   // while( Update(objects) ) {
+  //   SDL_Renderframe(screen);
   // }
   Draw(screen, focalLength, objects, lights);
-  SDL_Renderframe(screen);
 
   SDL_SaveImage( screen, "screenshot.bmp" );
 
@@ -182,7 +183,7 @@ bool Update(vector<Object>& objects) {
 }
 
 vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector<Light>& lights, int depth) {
-  int maxDepth = 5;
+  int maxDepth = 4;
   if (depth > maxDepth) return vec3(0, 0, 0);
 
   Intersection closestIntersection = {
@@ -247,6 +248,10 @@ vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector
         reflectionColor += GetColourForRay(reflectionRayOrig, reflectionDirection, objects, lights, depth+1);
 
         returnColour = reflectionColor*kr + refractionColor*(1-kr);
+        break;
+      case 4: /* light */
+        returnColour = 8.1f*vec3(1, 1, 1) * colour;
+        break;
       default:
         returnColour = returnColour;
         break;
@@ -277,34 +282,18 @@ vec3 GetDirectLightForPixel(const vec4 position, const vec4 normal, const vector
       D = vec3(0, 0, 0);
     }
   }
-  // vec3 D = vec3(0, 0, 0);
-
-  // for (size_t i = 0; i < lights.size(); i++) {
-  //   float r = glm::distance(position, lights[i].position);
-  //   float A = 4 * M_PI * r * r;
-  //   vec3 B = lights[i].colour / A;
-  //   vec4 r_hat = (lights[i].position - position);
-  //   vec4 n = normal;
-  //
-  //   // if (FindClosestLight(position, normal, closestLight, objects)){
-  //   //   float lightDistance = glm::distance(position, lightPos);
-  //   //   float vectDistance = closestLight.distance;
-  //   //   if (vectDistance >= lightDistance) { /* Case where the object is in shadow */
-  //   //   }
-  //   // }
-  //   D += B * max(glm::dot(n, r_hat), 0.0f);
-  // }
 
   return D;
 }
 
 vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Object>& objects, int depth) {
-  int maxDepth = 3;
+  int maxDepth = 0;
   if (depth > maxDepth) return vec3(0, 0, 0);
 
-  int someNumberOfRays = 64;
+  int someNumberOfRays = 32;
   vec3 Nt;
   vec3 Nb;
+  vec3 lightFromSource = vec3(0, 0, 0);
   vec3 indirectLight = vec3(0, 0, 0);
   vec3 hitColour = vec3(0, 0, 0);
   Intersection closestObject = {
@@ -331,11 +320,17 @@ vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Obj
     // Get the hit object's colour and add it on to the final colour
     if (ClosestIntersection(start + 0.001f * normal, direction, objects, closestObject)) {
       hitColour = objects[closestObject.objectIndex].color;
+      int material = objects[closestObject.objectIndex].material;
+      // if (material == 4) {
+      //   lightFromSource += vec3(0.95, 0.95, 0.95);
+      // }
       indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + GetIndirectLightForPixel(closestObject.position, objects[closestObject.objectIndex].normal, objects, depth+1);
     }
   }
 
   indirectLight /= float(someNumberOfRays)*float(maxDepth+1);
+
+  indirectLight += lightFromSource;
 
   return indirectLight;
 }

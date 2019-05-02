@@ -105,12 +105,12 @@ void LoadTestModel( std::vector<Object>& objects ) {
 	objects.push_back( Object( C, D, B, 0.f, gray, "triangle", 0 ) );
 
 	// Left wall
-	objects.push_back( Object( A, E, C, 0.f, pink, "triangle", 0 ) );
-	objects.push_back( Object( C, E, G, 0.f, pink, "triangle", 0 ) );
+	objects.push_back( Object( A, E, C, 0.f, red, "triangle", 0 ) );
+	objects.push_back( Object( C, E, G, 0.f, red, "triangle", 0 ) );
 
 	// Right wall
-	objects.push_back( Object( F, B, D, 0.f, violet, "triangle", 0 ) );
-	objects.push_back( Object( H, F, D, 0.f, violet, "triangle", 0 ) );
+	objects.push_back( Object( F, B, D, 0.f, green, "triangle", 0 ) );
+	objects.push_back( Object( H, F, D, 0.f, green, "triangle", 0 ) );
 
 	// Ceiling
 	objects.push_back( Object( E, F, G, 0.f, gray, "triangle", 0 ) );
@@ -133,25 +133,29 @@ void LoadTestModel( std::vector<Object>& objects ) {
 	G = vec4(240,165,272,1);
 	H = vec4( 82,165,225,1);
 
+	int shortStart = objects.size();
+
 	// Front
-	objects.push_back( Object(E,B,A, 0.f, pink, "triangle", 0) );
-	objects.push_back( Object(E,F,B, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(E,B,A, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(E,F,B, 0.f, gray, "triangle", 0) );
 
 	// RIGHT
-	objects.push_back( Object(F,D,B, 0.f, pink, "triangle", 0) );
-	objects.push_back( Object(F,H,D, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(F,D,B, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(F,H,D, 0.f, gray, "triangle", 0) );
 
 	// BACK
-	objects.push_back( Object(H,C,D, 0.f, pink, "triangle", 0) );
-	objects.push_back( Object(H,G,C, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(H,C,D, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(H,G,C, 0.f, gray, "triangle", 0) );
 
 	// LEFT
-	objects.push_back( Object(G,E,C, 0.f, pink, "triangle", 0) );
-	objects.push_back( Object(E,A,C, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(G,E,C, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(E,A,C, 0.f, gray, "triangle", 0) );
 
 	// TOP
-	objects.push_back( Object(G,F,E, 0.f, pink, "triangle", 0) );
-	objects.push_back( Object(G,H,F, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(G,F,E, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(G,H,F, 0.f, gray, "triangle", 0) );
+
+	int shortEnd = objects.size();
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -166,25 +170,29 @@ void LoadTestModel( std::vector<Object>& objects ) {
 	G = vec4(472,330,406,1);
 	H = vec4(314,330,456,1);
 
+	int tallStart = objects.size();
+
 	// Front
-	objects.push_back( Object(E,B,A,0.f, violet, "triangle", 0) );
-	objects.push_back( Object(E,F,B,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(E,B,A,0.f, gray, "triangle", 0) );
+	objects.push_back( Object(E,F,B,0.f, gray, "triangle", 0) );
 
 	// RIGHT
-	objects.push_back( Object(F,D,B,0.f, violet, "triangle", 0) );
-	objects.push_back( Object(F,H,D,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(F,D,B,0.f, gray, "triangle", 0) );
+	objects.push_back( Object(F,H,D,0.f, gray, "triangle", 0) );
 
 	// BACK
-	objects.push_back( Object(H,C,D,0.f, violet, "triangle", 0) );
-	objects.push_back( Object(H,G,C,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(H,C,D,0.f, gray, "triangle", 0) );
+	objects.push_back( Object(H,G,C,0.f, gray, "triangle", 0) );
 
 	// LEFT
-	objects.push_back( Object(G,E,C,0.f, violet, "triangle", 0) );
-	objects.push_back( Object(E,A,C,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(G,E,C,0.f, gray, "triangle", 0) );
+	objects.push_back( Object(E,A,C,0.f, gray, "triangle", 0) );
 
 	// TOP
-	objects.push_back( Object(G,F,E,0.f, violet, "triangle", 0) );
-	objects.push_back( Object(G,H,F,0.f, violet, "triangle", 0) );
+	objects.push_back( Object(G,F,E,0.f, gray, "triangle", 0) );
+	objects.push_back( Object(G,H,F,0.f, gray, "triangle", 0) );
+
+	int tallEnd = objects.size();
 
 	// ----------------------------------------------
 	// Scale to the volume [-1,1]^3
@@ -212,6 +220,31 @@ void LoadTestModel( std::vector<Object>& objects ) {
 		objects[i].v2.w = 1.0;
 
 		objects[i].ComputeNormal();
+	}
+
+	mat4 R;
+	RotationMatrixByAngle(0.0f, 5.0f, 0.0f, R);
+
+	for (int i = tallStart; i < tallEnd; i++) {
+		objects[i].v0 = R * objects[i].v0;
+		objects[i].v1 = R * objects[i].v1;
+		objects[i].v2 = R * objects[i].v2;
+
+		objects[i].v0 -= vec4(0.5,0,0,0);
+		objects[i].v1 -= vec4(0.5,0,0,0);
+		objects[i].v2 -= vec4(0.5,0,0,0);
+	}
+
+	RotationMatrixByAngle(0.0f, -5.0f, 0.0f, R);
+
+	for (int i = shortStart; i < shortEnd; i++) {
+		objects[i].v0 = R * objects[i].v0;
+		objects[i].v1 = R * objects[i].v1;
+		objects[i].v2 = R * objects[i].v2;
+
+		objects[i].v0 -= vec4(0.1,0,0.5,0);
+		objects[i].v1 -= vec4(0.1,0,0.5,0);
+		objects[i].v2 -= vec4(0.1,0,0.5,0);
 	}
 }
 
