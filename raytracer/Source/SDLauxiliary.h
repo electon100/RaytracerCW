@@ -43,14 +43,14 @@ void SDL_SaveImage(screen *s, const char* filename)
 
   SDL_Surface* surf = SDL_CreateRGBSurfaceFrom((void*)s->buffer, s->width, s->height,
 					       32, s->width*sizeof(uint32_t),
-					       rmask,gmask,bmask,amask);
+					       rmask,gmask,bmask,0);
   if(SDL_SaveBMP(surf, filename) !=0)
     {
       std::cout << "Failed to save image: "
 		<< SDL_GetError() << std::endl;
       exit(1);
     }
-  
+
 }
 
 void KillSDL(screen* s)
@@ -78,13 +78,13 @@ screen* InitializeSDL(int width,int height, bool fullscreen)
 		<< SDL_GetError() << std::endl;
       exit(1);
     }
-  
+
   screen *s = new screen;
   s->width = width;
   s->height = height;
   s->buffer = new uint32_t[width*height];
   memset(s->buffer, 0, width*height*sizeof(uint32_t));
-  
+
   uint32_t flags = SDL_WINDOW_OPENGL;
   if(fullscreen)
     {
@@ -122,7 +122,7 @@ screen* InitializeSDL(int width,int height, bool fullscreen)
 	     << SDL_GetError() << std::endl;
       exit(1);
     }
-  
+
   return s;
 }
 

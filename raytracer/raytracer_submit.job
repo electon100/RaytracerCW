@@ -1,0 +1,12 @@
+#!/bin/bash
+#PBS -N stencil
+#PBS -o stencil.out
+#PBS -joe
+#PBS -m a
+#PBS -qteaching
+#PBS -lnodes=1:ppn=1
+#PBS -lwalltime=00:10:00
+
+cd $PBS_O_WORKDIR
+
+./Build/skeleton

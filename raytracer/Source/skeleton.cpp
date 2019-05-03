@@ -15,8 +15,8 @@ using glm::vec4;
 using glm::mat4;
 
 
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 256
 #define FULLSCREEN_MODE false
 #define _USE_MATH_DEFINES
 
@@ -31,7 +31,6 @@ float yaw = 0.f;
 float zaw = 0.f;
 
 vec4 lightPos(0, -0.5, 0.f, 1.0);
-vec4 reflectPos(-1.5, -0.5, -0.7, 1.0);
 vec3 lightColour = 7.f * vec3(1, 1, 1);
 float z = -2.f;
 float focalLength = SCREEN_WIDTH/2;
@@ -68,19 +67,21 @@ int main( int argc, char* argv[] ) {
   screen *screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT, FULLSCREEN_MODE );
 
   vector<Light> lights;
-  LoadLights(lights);
 
   vector<Object> objects;
   LoadTestModel(objects);
-  LoadSphereModel(objects, vec3(0.4f, -0.1f, 0.1f), 0.1f, 2);
-  LoadSphereModel(objects, vec3(-0.4f, 0.6f, -0.7f), 0.1f, 3);
-  // LoadBunnyModel(objects);
-  // LoadSphereModel(objects, vec3(0.5f, 0.67f, 0.f), 0.1f, 3);
+  LoadLights(objects);
+  lightPos = (objects[objects.size()-1].v0 + objects[objects.size()-1].v1 + objects[objects.size()-1].v2 + objects[objects.size()-2].v2)/4.f;
+  lightPos.y += 0.01f;
+  LoadSphereModel(objects, vec3(-0.6f, 0.f, 0.8f), 0.1f, 0);
+  LoadSphereModel(objects, vec3(-0.2f, 0.f, 0.4f), 0.1f, 1);
+  LoadSphereModel(objects, vec3(0.2f, 0.f, 0.f), 0.1f, 2);
+  LoadSphereModel(objects, vec3(0.6f, 0.f, -0.4f), 0.1f, 3);
 
-  // while( Update(objects) ) {
-  // }
-  Draw(screen, focalLength, objects, lights);
-  SDL_Renderframe(screen);
+  while( Update(objects) ) {
+    Draw(screen, focalLength, objects, lights);
+    SDL_Renderframe(screen);
+  }
 
   SDL_SaveImage( screen, "screenshot.bmp" );
 
@@ -182,7 +183,7 @@ bool Update(vector<Object>& objects) {
 }
 
 vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector<Light>& lights, int depth) {
-  int maxDepth = 5;
+  int maxDepth = 15;
   if (depth > maxDepth) return vec3(0, 0, 0);
 
   Intersection closestIntersection = {
@@ -217,6 +218,11 @@ vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector
         indirectLight = GetIndirectLightForPixel(position, normal, objects, 0);
         returnColour = colour * (directLight + indirectLight);
         break;
+      case 1:
+        directLight = SpecularLight(position, normal, direction);
+        indirectLight = GetIndirectLightForPixel(position, normal, objects, 0);
+        returnColour = colour * (directLight + indirectLight);
+        break;
       case 2: /* mirror */
         bias = 0.001f*normal;
         outside = dot(direction, normal) < 0;
@@ -247,6 +253,10 @@ vec3 GetColourForRay(vec4 start, vec4 direction, vector<Object>& objects, vector
         reflectionColor += GetColourForRay(reflectionRayOrig, reflectionDirection, objects, lights, depth+1);
 
         returnColour = reflectionColor*kr + refractionColor*(1-kr);
+        break;
+      case 4: /* light */
+        returnColour = 8.1f*vec3(1, 1, 1) * colour;
+        break;
       default:
         returnColour = returnColour;
         break;
@@ -277,34 +287,18 @@ vec3 GetDirectLightForPixel(const vec4 position, const vec4 normal, const vector
       D = vec3(0, 0, 0);
     }
   }
-  // vec3 D = vec3(0, 0, 0);
-
-  // for (size_t i = 0; i < lights.size(); i++) {
-  //   float r = glm::distance(position, lights[i].position);
-  //   float A = 4 * M_PI * r * r;
-  //   vec3 B = lights[i].colour / A;
-  //   vec4 r_hat = (lights[i].position - position);
-  //   vec4 n = normal;
-  //
-  //   // if (FindClosestLight(position, normal, closestLight, objects)){
-  //   //   float lightDistance = glm::distance(position, lightPos);
-  //   //   float vectDistance = closestLight.distance;
-  //   //   if (vectDistance >= lightDistance) { /* Case where the object is in shadow */
-  //   //   }
-  //   // }
-  //   D += B * max(glm::dot(n, r_hat), 0.0f);
-  // }
 
   return D;
 }
 
 vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Object>& objects, int depth) {
-  int maxDepth = 3;
+  int maxDepth = 0;
   if (depth > maxDepth) return vec3(0, 0, 0);
 
-  int someNumberOfRays = 64;
+  int someNumberOfRays = 128;
   vec3 Nt;
   vec3 Nb;
+  vec3 lightFromSource = vec3(0, 0, 0);
   vec3 indirectLight = vec3(0, 0, 0);
   vec3 hitColour = vec3(0, 0, 0);
   Intersection closestObject = {
@@ -331,11 +325,17 @@ vec3 GetIndirectLightForPixel(const vec4 position, const vec4 normal, vector<Obj
     // Get the hit object's colour and add it on to the final colour
     if (ClosestIntersection(start + 0.001f * normal, direction, objects, closestObject)) {
       hitColour = objects[closestObject.objectIndex].color;
+      int material = objects[closestObject.objectIndex].material;
+      // if (material == 4) {
+      //   lightFromSource += vec3(1, 1, 1);
+      // }
       indirectLight += glm::dot(vec3(normal), sampleWorld) * hitColour + GetIndirectLightForPixel(closestObject.position, objects[closestObject.objectIndex].normal, objects, depth+1);
     }
   }
 
   indirectLight /= float(someNumberOfRays)*float(maxDepth+1);
+
+  // indirectLight += lightFromSource/float(someNumberOfRays);
 
   return indirectLight;
 }
@@ -437,11 +437,12 @@ vec3 SpecularLight(const vec4 position, const vec4 normal, vec4 direction) {
   float A = 4 * M_PI * r * r;
   vec3 B = lightColour / A;
   vec4 r_hat = normalize(lightPos - position);
-  vec4 cameraRay = normalize(R*cameraPos - position);
-  vec4 reflected = (cameraRay + r_hat);
-  float norm = findNorm(reflected);
-  float r_dot_v = max(glm::dot(reflected/norm, cameraRay), 0.0f);
-  vec3 specular = B * pow(r_dot_v, 1.0f/20.0f);
+  vec4 cameraRay = normalize(cameraPos - position);
+  // vec4 reflected = (cameraRay + r_hat);
+  // float norm = findNorm(reflected);
+  vec4 reflected = normalize(reflect(r_hat, normal));
+  float r_dot_v = glm::dot(reflected, cameraRay);
+  vec3 specular = B * pow(r_dot_v, 20.0f);
 
   return specular;
 }
@@ -514,8 +515,6 @@ void fresnel(const vec4 &I, const vec4 &N, const float &ior, float &kr) {
         float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
         kr = (Rs * Rs + Rp * Rp) / 2;
     }
-    // As a consequence of the conservation of energy, transmittance is given by:
-    // kt = 1 - kr;
 }
 
 void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb) {
@@ -527,8 +526,6 @@ void createCoordinateSystem(const vec4 &normal, vec3 &Nt, vec3 &Nb) {
 }
 
 vec3 uniformSampleHemisphere(const float &r1, const float &r2) {
-  // cos(theta) = r1 = y
-  // cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
   float sinTheta = sqrtf(1 - r1 * r1);
   float phi = 2 * M_PI * r2;
   float x = sinTheta * cosf(phi);

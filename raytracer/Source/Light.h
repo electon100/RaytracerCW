@@ -34,19 +34,30 @@ public:
 
 };
 
-void LoadLights(vector<Light>& lights) {
+void LoadLights(vector<Object>& lights) {
+	//
+  // lights.clear();
+  // lights.reserve( 10*10 );
 
-  lights.clear();
-  lights.reserve( 10*10 );
+  // for (int i = -3; i < 4; i++) {
+  //   for (int j = -3; j < 4; j++) {
+  //     float offsetX = float(i)/float(10);
+  //     float offsetZ = float(j)/float(10);
+  //     vec4 newLightPos = centrePos + vec4(offsetX, 0, offsetZ, 0);
+  //     lights.push_back(Light(newLightPos, colour));
+  //   }
+  // }
 
-  for (int i = -3; i < 4; i++) {
-    for (int j = -3; j < 4; j++) {
-      float offsetX = float(i)/float(10);
-      float offsetZ = float(j)/float(10);
-      vec4 newLightPos = centrePos + vec4(offsetX, 0, offsetZ, 0);
-      lights.push_back(Light(newLightPos, colour));
-    }
-  }
+	vec4 A(-0.3, -0.99, -0.2f, 1.f);
+	vec4 B(0.3, -0.99, -0.2f, 1.f);
+	vec4 C(0.3, -0.99, 0.2f, 1.f);
+	vec4 D(-0.3, -0.99, 0.2f, 1.f);
+	int start = lights.size();
+	lights.push_back(Object(A, B, C, 0.f, vec3(1, 1, 1), "triangle", 4));
+	lights.push_back(Object(A, D, C, 0.f, vec3(1, 1, 1), "triangle", 4));
+
+	lights[start].ComputeNormal();
+	lights[start+1].ComputeNormal();
 }
 
 #endif
