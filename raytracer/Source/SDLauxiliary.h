@@ -56,9 +56,9 @@ void SDL_SaveImage(screen *s, const char* filename)
 void KillSDL(screen* s)
 {
   delete[] s->buffer;
-  // SDL_DestroyTexture(s->texture);
-  // SDL_DestroyRenderer(s->renderer);
-  // SDL_DestroyWindow(s->window);
+  SDL_DestroyTexture(s->texture);
+  SDL_DestroyRenderer(s->renderer);
+  SDL_DestroyWindow(s->window);
   SDL_Quit();
 }
 
@@ -90,38 +90,38 @@ screen* InitializeSDL(int width,int height, bool fullscreen)
     {
       flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
-  // s->window = SDL_CreateWindow("COMS30115",
-	// 			      SDL_WINDOWPOS_UNDEFINED,
-	// 			      SDL_WINDOWPOS_UNDEFINED,
-	// 			      width, height,flags);
-  // if(s->window == 0)
-  //   {
-  //     std::cout << "Could not set video mode: "
-	//      << SDL_GetError() << std::endl;
-  //     exit(1);
-  //   }
-  //
-  // flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-  // s->renderer = SDL_CreateRenderer(s->window, -1, flags);
-  // if(s->renderer == 0)
-  //   {
-  //     std::cout << "Could not create renderer: "
-	//      << SDL_GetError() << std::endl;
-  //     exit(1);
-  //   }
-  // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-  // SDL_RenderSetLogicalSize(s->renderer, width,height);
-  //
-  // s->texture = SDL_CreateTexture(s->renderer,
-	// 			 SDL_PIXELFORMAT_ARGB8888,
-	// 			 SDL_TEXTUREACCESS_STATIC,
-	// 			 s->width,s->height);
-  // if(s->texture==0)
-  //   {
-  //     std::cout << "Could not allocate texture: "
-	//      << SDL_GetError() << std::endl;
-  //     exit(1);
-  //   }
+  s->window = SDL_CreateWindow("COMS30115",
+				      SDL_WINDOWPOS_UNDEFINED,
+				      SDL_WINDOWPOS_UNDEFINED,
+				      width, height,flags);
+  if(s->window == 0)
+    {
+      std::cout << "Could not set video mode: "
+	     << SDL_GetError() << std::endl;
+      exit(1);
+    }
+
+  flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+  s->renderer = SDL_CreateRenderer(s->window, -1, flags);
+  if(s->renderer == 0)
+    {
+      std::cout << "Could not create renderer: "
+	     << SDL_GetError() << std::endl;
+      exit(1);
+    }
+  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+  SDL_RenderSetLogicalSize(s->renderer, width,height);
+
+  s->texture = SDL_CreateTexture(s->renderer,
+				 SDL_PIXELFORMAT_ARGB8888,
+				 SDL_TEXTUREACCESS_STATIC,
+				 s->width,s->height);
+  if(s->texture==0)
+    {
+      std::cout << "Could not allocate texture: "
+	     << SDL_GetError() << std::endl;
+      exit(1);
+    }
 
   return s;
 }

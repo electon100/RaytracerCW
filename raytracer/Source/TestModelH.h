@@ -122,7 +122,7 @@ void LoadTestModel( std::vector<Object>& objects ) {
 
 	// ---------------------------------------------------------------------------
 	// Short block
-
+	/*
 	A = vec4(290,0,114,1);
 	B = vec4(130,0, 65,1);
 	C = vec4(240,0,272,1);
@@ -136,27 +136,27 @@ void LoadTestModel( std::vector<Object>& objects ) {
 	int shortStart = objects.size();
 
 	// Front
-	objects.push_back( Object(E,B,A, 0.f, gray, "triangle", 0) );
-	objects.push_back( Object(E,F,B, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(E,B,A, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(E,F,B, 0.f, pink, "triangle", 0) );
 
 	// RIGHT
-	objects.push_back( Object(F,D,B, 0.f, gray, "triangle", 0) );
-	objects.push_back( Object(F,H,D, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(F,D,B, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(F,H,D, 0.f, pink, "triangle", 0) );
 
 	// BACK
-	objects.push_back( Object(H,C,D, 0.f, gray, "triangle", 0) );
-	objects.push_back( Object(H,G,C, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(H,C,D, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(H,G,C, 0.f, pink, "triangle", 0) );
 
 	// LEFT
-	objects.push_back( Object(G,E,C, 0.f, gray, "triangle", 0) );
-	objects.push_back( Object(E,A,C, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(G,E,C, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(E,A,C, 0.f, pink, "triangle", 0) );
 
 	// TOP
-	objects.push_back( Object(G,F,E, 0.f, gray, "triangle", 0) );
-	objects.push_back( Object(G,H,F, 0.f, gray, "triangle", 0) );
+	objects.push_back( Object(G,F,E, 0.f, pink, "triangle", 0) );
+	objects.push_back( Object(G,H,F, 0.f, pink, "triangle", 0) );
 
 	int shortEnd = objects.size();
-
+	
 	// ---------------------------------------------------------------------------
 	// Tall block
 
@@ -196,6 +196,7 @@ void LoadTestModel( std::vector<Object>& objects ) {
 
 	// ----------------------------------------------
 	// Scale to the volume [-1,1]^3
+	*/
 
 	for( size_t i=0; i<objects.size(); ++i )
 	{
@@ -221,7 +222,7 @@ void LoadTestModel( std::vector<Object>& objects ) {
 
 		objects[i].ComputeNormal();
 	}
-
+	/*
 	mat4 R;
 	RotationMatrixByAngle(0.0f, 5.0f, 0.0f, R);
 
@@ -246,6 +247,7 @@ void LoadTestModel( std::vector<Object>& objects ) {
 		objects[i].v1 -= vec4(0.1,0,0.5,0);
 		objects[i].v2 -= vec4(0.1,0,0.5,0);
 	}
+	*/
 }
 
 void LoadBunnyModel( std::vector<Object>& model ) {
@@ -320,7 +322,7 @@ void LoadBunnyModel( std::vector<Object>& model ) {
 }
 
 void LoadSphereModel(vector<Object>& objects, vec3 offset, float radius, int material) {
-	Object sphere = Object(vec4(offset.x,offset.y,offset.z,1), vec4(0,0,0,1), vec4(0,0,0,1), radius, vec3(1, 1, 1), "sphere", material);
+	Object sphere = Object(vec4(offset.x,offset.y,offset.z,1), vec4(0,0,0,1), vec4(0,0,0,1), radius, vec3(0.75f, 0.75f, 0.75f), "sphere", material);
 	objects.push_back(sphere);
 }
 
